@@ -71,11 +71,11 @@ export default async function CreateEventPage() {
         // For now, we'll skip this step
       }
 
-      // Redirect to the event page
-      return redirect(`/events/${event.id}`);
+      // Return the ID so we can redirect on the client
+      return { success: true, eventId: event.id };
     } catch (error) {
       console.error('Error creating event:', error);
-      throw new Error('Failed to create event. Please try again.');
+      return { success: false, error: 'Failed to create event. Please try again.' };
     }
   }
 

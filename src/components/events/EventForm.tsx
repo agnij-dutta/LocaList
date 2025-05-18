@@ -43,15 +43,17 @@ const CATEGORY_OPTIONS = [
 ];
 
 interface EventFormProps {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: FormData) => Promise<{ success: boolean; eventId?: number; error?: string }>;
   initialData?: EventFormValues;
   isSubmitting?: boolean;
 }
 
-export default function EventForm({ onSubmit, initialData, isSubmitting = false }: EventFormProps) {
+export default function EventForm({ onSubmit, initialData, isSubmitting: propSubmitting = false }: EventFormProps) {
   const router = useRouter();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(propSubmitting);
+  const [error, setError] = useState<string | null>(null);
 
   const defaultValues: Partial<EventFormValues> = {
     title: '',
@@ -87,7 +89,10 @@ export default function EventForm({ onSubmit, initialData, isSubmitting = false 
   };
 
   const processForm = async (data: EventFormValues) => {
-    // Combine date and time fields
+    setIsSubmitting(true);
+    setError(null);
+    
+    // Create form data
     const formData = new FormData();
     
     Object.entries(data).forEach(([key, value]) => {
@@ -98,7 +103,21 @@ export default function EventForm({ onSubmit, initialData, isSubmitting = false 
       formData.append('image', imageFile);
     }
     
-    await onSubmit(formData);
+    try {
+      const result = await onSubmit(formData);
+      
+      if (result.success && result.eventId) {
+        // Navigate to the event page on success
+        router.push(`/events/${result.eventId}`);
+      } else if (result.error) {
+        setError(result.error);
+        setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -107,6 +126,12 @@ export default function EventForm({ onSubmit, initialData, isSubmitting = false 
 
   return (
     <form onSubmit={handleSubmit(processForm)} className="space-y-6">
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/30 p-4 rounded-md">
+          <p className="text-red-600 dark:text-red-400">{error}</p>
+        </div>
+      )}
+      
       <div className="space-y-4">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
