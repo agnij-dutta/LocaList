@@ -1,9 +1,11 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import db from '@/lib/db';
 import BaseLayout from '@/components/layouts/BaseLayout';
 import Container from '@/components/ui/Container';
 import EventsGrid from '@/components/events/EventsGrid';
+import Button from '@/components/ui/Button';
 
 export const metadata: Metadata = {
   title: 'Explore Events - LocaList',
@@ -81,11 +83,21 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   return (
     <BaseLayout currentUser={currentUser}>
       <Container className="py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Explore Events</h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Discover exciting events happening in your community
-          </p>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Explore Events</h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Discover exciting events happening in your community
+            </p>
+          </div>
+          
+          {currentUser && (
+            <Link href="/events/create">
+              <Button>
+                Add New Event
+              </Button>
+            </Link>
+          )}
         </div>
         
         <EventsGrid events={events} currentUserId={currentUser?.id} />
