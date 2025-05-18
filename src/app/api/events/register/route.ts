@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     
     // Get request body
     const body = await req.json();
-    const { eventId, userId, numberOfPeople = 1 } = body;
+    const { eventId, userId } = body;
     
     // Validate user ID against session
     if (session.user.id.toString() !== userId.toString()) {
@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         eventId,
-        numberOfPeople,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },

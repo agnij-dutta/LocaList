@@ -50,6 +50,8 @@ export default async function CreateEventPage() {
         registrationStart = new Date(`${registrationStartDate}T${registrationStartTime}`);
       }
 
+      const now = new Date();
+
       // Create event in database
       const event = await db.event.create({
         data: {
@@ -61,6 +63,8 @@ export default async function CreateEventPage() {
           registrationStart,
           organizerId: user.id,
           isApproved: true, // Auto-approve for now
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString()
         },
       });
 
