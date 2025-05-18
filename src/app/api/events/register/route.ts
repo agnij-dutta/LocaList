@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const { eventId, userId, numberOfPeople = 1 } = body;
     
     // Validate user ID against session
-    if (session.user.id !== userId) {
+    if (session.user.id.toString() !== userId.toString()) {
       return NextResponse.json(
         { message: "Unauthorized action" },
         { status: 403 }

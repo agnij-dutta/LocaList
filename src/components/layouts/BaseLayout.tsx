@@ -15,7 +15,7 @@ interface BaseLayoutProps {
 
 export default function BaseLayout({ children, currentUser }: BaseLayoutProps) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-slate-900">
       <Navbar currentUser={currentUser} />
       <main className="flex-grow">{children}</main>
       <Footer />
