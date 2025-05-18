@@ -112,3 +112,6 @@ After seeding the database, you can use the following credentials to log in:
 - `DELETE /api/events/[eventId]/interest`: Cancel interest in an event
 - `GET /api/seed`: Seed the database with sample data
 - `GET /api/test`: Test database connections and get counts
+
+
+Video - https://drive.google.com/file/d/1QD10BZdmL2klfCuEDNLgeF8Eq63_FnWt/view?usp=sharing
