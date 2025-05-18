@@ -1,0 +1,48 @@
+{
+  "name": "localist",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "node src/scripts/script-loader.js seed-db",
+    "reset-db": "node src/scripts/script-loader.js reset-db",
+    "validate-db": "node src/scripts/script-loader.js validate-db"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
+    "axios": "^1.9.0",
+    "bcrypt": "^6.0.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "next": "15.3.2",
+    "next-auth": "^4.24.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.56.4",
+    "react-icons": "^5.5.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "tailwind-merge": "^3.3.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.2",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}
