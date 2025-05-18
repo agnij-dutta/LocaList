@@ -7,7 +7,7 @@ import Container from '@/components/ui/Container';
 import EventCard from '@/components/events/EventCard';
 import { FiArrowRight, FiCalendar, FiMapPin, FiUser } from 'react-icons/fi';
 import Button from '@/components/ui/Button';
-import { seed } from '@/lib/seed';
+import seedDatabase from '@/lib/seed';
 
 export const metadata: Metadata = {
   title: 'LocaList - Discover Local Events',
@@ -35,7 +35,7 @@ export default async function HomePage() {
   // Seed the database if needed (only in development)
   if (process.env.NODE_ENV !== 'production') {
     try {
-      await seed();
+      await seedDatabase();
     } catch (error) {
       console.error("Error seeding database:", error);
     }
