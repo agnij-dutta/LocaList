@@ -52,6 +52,11 @@ export default async function CreateEventPage() {
 
       const now = new Date();
 
+      // Get coordinates from form or use default (can be enhanced later with geocoding API)
+      // For now, we'll use default coordinates based on location string or use Kolkata as fallback
+      const latitude = parseFloat(formData.get('latitude') as string) || 22.5726; // Default to Kolkata
+      const longitude = parseFloat(formData.get('longitude') as string) || 88.3639;
+
       // Create event in database
       const event = await db.event.create({
         data: {
@@ -59,6 +64,8 @@ export default async function CreateEventPage() {
           location,
           description,
           category,
+          latitude,
+          longitude,
           startDate: eventStartDate,
           registrationStart,
           organizerId: user.id,

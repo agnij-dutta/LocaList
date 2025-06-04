@@ -29,9 +29,13 @@ export default async function CreateIssuePage() {
       const isAnonymous = formData.get('isAnonymous') === 'true';
 
       // Validate required fields
-      if (!title || !description || !category || !location || !latitude || !longitude) {
-        return { success: false, error: 'All required fields must be filled' };
+      if (!title || !description || !category || !location) {
+        return { success: false, error: 'Title, description, category, and location are required' };
       }
+
+      // Handle missing coordinates with defaults
+      const lat = latitude ? parseFloat(latitude) : 40.7128; // Default to NYC
+      const lng = longitude ? parseFloat(longitude) : -74.0060;
 
       // Handle photo uploads (simplified for now - in a real app you'd upload to a file service)
       const photos: string[] = [];
@@ -50,8 +54,8 @@ export default async function CreateIssuePage() {
         description,
         category,
         location,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        latitude: lat,
+        longitude: lng,
         isAnonymous,
       };
 
