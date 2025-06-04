@@ -162,7 +162,12 @@ export default async function EventDetailPage({ params }: { params: { id: string
                 ) : (
                   currentUser ? (
                     registrationIsOpen ? (
-                      <RegisterForm eventId={event.id} userId={parseInt(currentUser.id)} />
+                      <RegisterForm 
+                        eventId={event.id} 
+                        userId={parseInt(currentUser.id)} 
+                        userName={currentUser.name || ''}
+                        userEmail={currentUser.email || ''}
+                      />
                     ) : (
                       <div className="bg-amber-50 dark:bg-amber-900 p-4 rounded-lg">
                         <h3 className="text-lg font-medium text-amber-800 dark:text-amber-100">
@@ -209,7 +214,12 @@ export default async function EventDetailPage({ params }: { params: { id: string
                 ) : (
                   currentUser ? (
                     registrationIsOpen ? (
-                      <RegisterForm eventId={event.id} userId={parseInt(currentUser.id)} />
+                      <RegisterForm 
+                        eventId={event.id} 
+                        userId={parseInt(currentUser.id)} 
+                        userName={currentUser.name || ''}
+                        userEmail={currentUser.email || ''}
+                      />
                     ) : (
                       <div className="bg-amber-50 dark:bg-amber-900 p-4 rounded-lg">
                         <h3 className="text-lg font-medium text-amber-800 dark:text-amber-100">

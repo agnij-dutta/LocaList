@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { FiMenu, FiX, FiUser, FiLogIn, FiLogOut, FiPlus } from 'react-icons/fi';
 import { cn } from '@/lib/utils';
 import Button from './Button';
+import ThemeToggle from './ThemeToggle';
 
 interface NavbarProps {
   currentUser?: {
@@ -63,6 +64,8 @@ export default function Navbar({ currentUser }: NavbarProps) {
                   </Link>
                 )}
                 
+                <ThemeToggle />
+                
                 <div className="relative ml-3">
                   <Link href="/profile">
                     <Button 
@@ -89,6 +92,8 @@ export default function Navbar({ currentUser }: NavbarProps) {
               </>
             ) : (
               <>
+                <ThemeToggle />
+                
                 <Link href="/login">
                   <Button 
                     variant="outline" 
@@ -115,7 +120,9 @@ export default function Navbar({ currentUser }: NavbarProps) {
           </nav>
           
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            
             <button
               onClick={toggleMenu}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"

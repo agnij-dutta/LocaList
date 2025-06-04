@@ -11,6 +11,9 @@ import Button from '@/components/ui/Button';
 
 // Define the form schema
 const registrationSchema = z.object({
+  userName: z.string().min(1, 'Name is required'),
+  userEmail: z.string().email('Valid email is required'),
+  userPhone: z.string().optional(),
   numberOfPeople: z.number().min(1, 'Please select at least 1 person').max(10, 'Maximum 10 people allowed'),
 });
 
@@ -19,9 +22,11 @@ type RegistrationFormValues = z.infer<typeof registrationSchema>;
 interface RegisterFormProps {
   eventId: number;
   userId: number;
+  userName?: string;
+  userEmail?: string;
 }
 
-export default function RegisterForm({ eventId, userId }: RegisterFormProps) {
+export default function RegisterForm({ eventId, userId, userName = '', userEmail = '' }: RegisterFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +35,8 @@ export default function RegisterForm({ eventId, userId }: RegisterFormProps) {
   const { register, handleSubmit, formState: { errors } } = useForm<RegistrationFormValues>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
+      userName,
+      userEmail,
       numberOfPeople: 1,
     },
   });
@@ -42,6 +49,9 @@ export default function RegisterForm({ eventId, userId }: RegisterFormProps) {
       await axios.post('/api/events/register', {
         eventId,
         userId,
+        userName: data.userName,
+        userEmail: data.userEmail,
+        userPhone: data.userPhone,
         numberOfPeople: data.numberOfPeople,
       });
       
@@ -74,6 +84,60 @@ export default function RegisterForm({ eventId, userId }: RegisterFormProps) {
           <p className="text-red-700 dark:text-red-200 text-sm">{error}</p>
         </div>
       )}
+      
+      <div>
+        <label htmlFor="userName" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Full Name
+        </label>
+        <input
+          id="userName"
+          type="text"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+          placeholder="Your full name"
+          {...register('userName')}
+        />
+        {errors.userName && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {errors.userName.message}
+          </p>
+        )}
+      </div>
+      
+      <div>
+        <label htmlFor="userEmail" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Email
+        </label>
+        <input
+          id="userEmail"
+          type="email"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+          placeholder="Your email address"
+          {...register('userEmail')}
+        />
+        {errors.userEmail && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {errors.userEmail.message}
+          </p>
+        )}
+      </div>
+      
+      <div>
+        <label htmlFor="userPhone" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Phone (optional)
+        </label>
+        <input
+          id="userPhone"
+          type="tel"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+          placeholder="Your phone number"
+          {...register('userPhone')}
+        />
+        {errors.userPhone && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {errors.userPhone.message}
+          </p>
+        )}
+      </div>
       
       <div>
         <label htmlFor="numberOfPeople" className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
