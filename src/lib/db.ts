@@ -69,7 +69,7 @@ async function initializeDatabase(db: Database) {
       FOREIGN KEY (organizerId) REFERENCES users (id)
     )
   `);
-
+  
   // Create Event Photos table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS event_photos (
@@ -490,7 +490,7 @@ export const eventRepository = {
       if (field === 'urgency') {
         query += ' ORDER BY isUrgent DESC, createdAt DESC';
       } else {
-        query += ` ORDER BY ${field} ${order === 'asc' ? 'ASC' : 'DESC'}`;
+      query += ` ORDER BY ${field} ${order === 'asc' ? 'ASC' : 'DESC'}`;
       }
     } else {
       query += ' ORDER BY isUrgent DESC, createdAt DESC';
@@ -1082,7 +1082,7 @@ export const interestRepository = {
     const now = new Date().toISOString();
     
     try {
-      const result = await db.run(
+    const result = await db.run(
         `INSERT INTO interests (userId, eventId, userName, userEmail, userPhone, numberOfPeople, ticketTier, paymentStatus, paymentId, createdAt, updatedAt) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -1098,12 +1098,12 @@ export const interestRepository = {
           now, 
           now
         ]
-      );
-      
-      return {
-        id: result.lastID,
-        ...data,
-        createdAt: now,
+    );
+    
+    return {
+      id: result.lastID,
+      ...data,
+      createdAt: now,
         updatedAt: now
       };
     } catch (error) {
