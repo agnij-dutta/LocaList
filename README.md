@@ -1,114 +1,301 @@
-# LocaList
+# Community Pulse
 
-LocaList is a Next.js application that helps users find local events in their area. Users can browse events, register their interest, and even create new events.
+A location-aware community platform that brings neighbors together through local events and community issue reporting. Built with Next.js 15, TypeScript, and SQLite.
 
-## Features
+## 🌟 Overview
 
-- Browse events by category
-- Search for events by title, description, or location
-- Register interest in events with the number of people attending
-- Create and manage events
-- Admin dashboard for approving events
-- User authentication
-- Responsive design
+Community Pulse combines event discovery with community issue reporting in a single, user-friendly platform. The application uses GPS-based filtering to show only relevant content within a 3-5km radius, ensuring users see what matters in their immediate neighborhood.
 
-## Tech Stack
+## ✨ Key Features
 
-- Next.js 15.x
-- React 19.x
-- SQLite database (no ORM)
-- NextAuth.js for authentication
-- TailwindCSS for styling
-- React Hook Form for form handling
-- Zod for validation
+### 🎉 Event Management
+- **Event Categories**: Garage Sales, Sports Matches, Community Classes, Volunteer Opportunities, Exhibitions, Small Festivals, Lost & Found
+- **Smart Priority**: Lost & Found events are marked as urgent and highlighted for 24 hours
+- **Paid Events**: Support for ticket tiers (Platinum, Gold, Standard) with payment tracking
+- **Photo Albums**: Up to 3-5 photos per event with gallery display
+- **Event Voting**: Community upvoting system to highlight popular events
+- **Event Following**: Users can follow events for updates
+- **Live Countdowns**: Real-time countdown badges for upcoming events
+- **Auto-Approval**: Verified organizers get automatic event approval
+- **Post-Event Feedback**: Rating and review system for completed events
 
-## Getting Started
+### 🚨 Issue Reporting
+- **Issue Categories**: Roads, Lighting, Water Supply, Cleanliness, Public Safety, Obstructions
+- **Status Tracking**: Reported → In Progress → Resolved with real-time updates
+- **Anonymous Reporting**: Option to report issues without revealing identity
+- **Photo Evidence**: Support for up to 5 photos per issue report
+- **Community Voting**: Upvote system to prioritize important issues
+- **Issue Following**: Track status updates on reported issues
+- **Map Integration**: Location-based reporting with GPS coordinates
+
+### 👥 User Features
+- **Role Management**: Regular users, verified organizers, and administrators
+- **Location-Aware**: GPS-based filtering within 3-5km radius
+- **Smart Notifications**: Event reminders and issue status updates
+- **User Profiles**: Manage personal information and view activity history
+- **Community Guidelines**: Content moderation and violation reporting
+- **Safety First**: User banning system and content flagging
+
+### 🛡️ Safety & Moderation
+- **Content Moderation**: Admin review system for events and issues
+- **Community Guidelines**: Clear rules and enforcement mechanisms
+- **User Verification**: Verified organizer system for trusted event creators
+- **Violation Reporting**: Easy reporting of inappropriate content
+- **Automatic Flagging**: System-level content monitoring
+
+## 🏗️ Technical Architecture
+
+### Frontend
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript for type safety
+- **Styling**: Tailwind CSS with dark mode support
+- **UI Components**: Custom component library with React Hook Form
+- **Icons**: React Icons (Feather Icons)
+- **Forms**: React Hook Form with Zod validation
+- **Date Handling**: date-fns for date manipulation
+
+### Backend
+- **Database**: SQLite with custom repository pattern
+- **Authentication**: NextAuth.js with credentials provider
+- **API**: RESTful APIs with proper error handling
+- **File Uploads**: Prepared for integration with file storage services
+- **Location Services**: Haversine formula for distance calculations
+- **Password Security**: bcrypt for password hashing
+
+### Database Schema
+The application uses 15+ interconnected tables:
+
+**Core Tables:**
+- `users` - User accounts and profiles
+- `events` - Event information and metadata
+- `issues` - Community issue reports
+- `interests` - Event registrations
+
+**Relationship Tables:**
+- `event_votes` / `issue_votes` - Voting systems
+- `event_followers` / `issue_followers` - Following functionality
+- `event_photos` / `issue_photos` - Photo storage
+- `issue_status_updates` - Issue tracking
+- `event_feedback` - Post-event reviews
+- `notifications` - User notifications
+- `violation_reports` - Content moderation
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
-- Node.js 18.x or newer
-- npm or yarn
+- Node.js 18 or higher
+- npm or yarn package manager
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/localist.git
-   cd localist
+   git clone <repository-url>
+   cd LocaList
    ```
 
-2. Install dependencies:
+2. **Install dependencies**
    ```bash
    npm install
-   # or
-   yarn
    ```
 
-3. Set up your environment variables:
-   Create a `.env.local` file in the root directory with the following variables:
-   ```
+3. **Set up environment variables**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXTAUTH_SECRET=your-nextauth-secret-key
    NEXTAUTH_URL=http://localhost:3000
-   NEXTAUTH_SECRET=your-secret-key
+   DATABASE_URL=./data/community-pulse.db
    ```
 
-4. Initialize the database:
+4. **Initialize the database**
    ```bash
    npm run reset-db
-   # or
-   yarn reset-db
+   npm run seed
    ```
 
-5. Run the development server:
+5. **Start the development server**
    ```bash
    npm run dev
-   # or
-   yarn dev
    ```
 
-6. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-## Database Management
+## 📱 Usage Guide
 
-- **Reset Database**: Drops all tables and recreates them, then seeds with sample data
-  ```bash
-  npm run reset-db
-  ```
+### For Community Members
 
-- **Seed Database**: Only adds sample data without dropping tables
-  ```bash
-  npm run seed
-  ```
+1. **Getting Started**
+   - Register for an account or sign in
+   - Allow location access for personalized content
+   - Explore events and issues in your area
 
-- **Validate Database**: Checks database integrity and displays table information
-  ```bash
-  npm run validate-db
-  ```
+2. **Finding Events**
+   - Browse events by category
+   - Use search and filters
+   - View event details and photos
+   - Register for events you're interested in
 
-## Login Credentials
+3. **Reporting Issues**
+   - Navigate to the Issues page
+   - Click "Report Issue" 
+   - Fill out the form with details and photos
+   - Track the status of your reports
 
-After seeding the database, you can use the following credentials to log in:
+4. **Community Engagement**
+   - Vote on events and issues
+   - Follow events for updates
+   - Leave feedback after attending events
+   - Help prioritize community needs
 
-- **Admin User**:
-  - Email: admin@localist.com
-  - Password: admin123
+### For Event Organizers
 
-- **Regular User**:
-  - Email: john@example.com
-  - Password: password123
-  - This user is a verified organizer and can create events
+1. **Creating Events**
+   - Apply for verified organizer status
+   - Create detailed event listings
+   - Upload photos and set categories
+   - Manage registration and tickets
 
-- **Regular User**:
-  - Email: jane@example.com
-  - Password: password123
+2. **Managing Events**
+   - Track registrations and attendees
+   - Communicate with participants
+   - Update event details as needed
+   - Collect feedback post-event
 
-## API Endpoints
+### For Administrators
 
-- `GET /api/events`: Get all approved events
-- `GET /api/events/[id]`: Get a specific event by ID
-- `POST /api/events`: Create a new event
-- `GET /api/events/[eventId]/interest`: Check if current user is interested in an event
-- `POST /api/events/[eventId]/interest`: Register interest in an event
-- `PATCH /api/events/[eventId]/interest`: Update interest in an event
-- `DELETE /api/events/[eventId]/interest`: Cancel interest in an event
-- `GET /api/seed`: Seed the database with sample data
-- `GET /api/test`: Test database connections and get counts
+1. **Content Moderation**
+   - Review flagged content
+   - Approve/reject events
+   - Manage user accounts
+   - Monitor community guidelines
+
+2. **Platform Management**
+   - Track platform usage
+   - Manage violation reports
+   - Verify organizers
+   - Maintain community standards
+
+## 🛠️ Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run seed` - Seed database with sample data
+- `npm run reset-db` - Reset database schema
+- `npm run validate-db` - Validate database integrity
+
+### Project Structure
+
+```
+src/
+├── app/                 # Next.js App Router pages
+│   ├── api/            # API routes
+│   ├── (routes)/       # Page routes
+│   └── globals.css     # Global styles
+├── components/         # Reusable React components
+│   ├── ui/            # Basic UI components
+│   ├── events/        # Event-specific components
+│   ├── issues/        # Issue-specific components
+│   └── layouts/       # Layout components
+├── lib/               # Utility libraries
+│   ├── db.ts          # Database operations
+│   ├── auth.ts        # Authentication utilities
+│   └── utils.ts       # Helper functions
+├── hooks/             # Custom React hooks
+├── types/             # TypeScript type definitions
+└── providers/         # React context providers
+```
+
+### API Endpoints
+
+**Authentication:**
+- `POST /api/register` - User registration
+- `POST /api/auth/[...nextauth]` - Authentication
+
+**Events:**
+- `GET /api/events` - List events with filters
+- `POST /api/events` - Create new event
+- `POST /api/events/[id]/vote` - Vote on event
+- `POST /api/events/register` - Register for event
+
+**Issues:**
+- `GET /api/issues` - List issues with filters
+- `POST /api/issues` - Create new issue
+- `POST /api/issues/[id]/vote` - Vote on issue
+
+## 🔒 Security Features
+
+- **Authentication**: Secure user authentication with NextAuth.js
+- **Authorization**: Role-based access control
+- **Input Validation**: Comprehensive form validation with Zod
+- **SQL Injection Protection**: Parameterized queries
+- **Content Security**: Content moderation and flagging system
+- **Privacy**: Anonymous reporting options
+- **Data Protection**: Secure password hashing with bcrypt
+
+## 🌍 Location Features
+
+- **GPS Integration**: Automatic location detection
+- **Distance Filtering**: 3-5km radius-based content
+- **Manual Location**: Option to enter location manually
+- **Privacy**: Location data stored securely
+- **Accuracy**: High-precision coordinate tracking
+
+## 📊 Community Guidelines
+
+1. **Respectful Communication**: Be kind and constructive
+2. **Accurate Information**: Provide truthful event and issue details
+3. **Local Focus**: Keep content relevant to the community
+4. **Safety First**: Report unsafe conditions promptly
+5. **No Spam**: Avoid duplicate or promotional content
+6. **Privacy**: Respect others' privacy and personal information
+
+## 🤝 Contributing
+
+We welcome contributions to improve Community Pulse! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support, please:
+- Check the documentation
+- Search existing issues
+- Create a new issue if needed
+- Contact the development team
+
+## 🚧 Roadmap
+
+### Upcoming Features
+- [ ] Real-time notifications with WebSockets
+- [ ] Mobile app development
+- [ ] Integration with city services
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Weather integration for events
+- [ ] Social media sharing
+- [ ] Email notification system
+
+### Technical Improvements
+- [ ] Performance optimizations
+- [ ] Enhanced error handling
+- [ ] Automated testing suite
+- [ ] CI/CD pipeline
+- [ ] Docker containerization
+- [ ] Cloud deployment guides
+
+---
+
+**Community Pulse** - Connecting neighbors, building stronger communities. 🏘️✨
