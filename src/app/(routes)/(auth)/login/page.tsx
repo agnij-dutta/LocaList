@@ -21,11 +21,11 @@ export default async function LoginPage() {
   return (
     <BaseLayout currentUser={null}>
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col justify-center">
-        <Container className="py-16">
-          <div className="flex justify-center">
-            <LoginForm />
-          </div>
-        </Container>
+    <Container className="py-16">
+      <div className="flex justify-center">
+        <LoginForm />
+      </div>
+    </Container>
       </div>
     </BaseLayout>
   );

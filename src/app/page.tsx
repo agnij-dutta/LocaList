@@ -134,11 +134,11 @@ export default async function HomePage() {
                 </Link>
                 
                 <Link href="/issues">
-                  <Button variant="outline" size="lg" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/40">
+                    <Button variant="outline" size="lg" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/40">
                     <FiAlertTriangle className="h-5 w-5" />
                     Report Issues
-                  </Button>
-                </Link>
+                    </Button>
+                  </Link>
               </div>
             </div>
             <div className="lg:w-1/2 flex justify-center">
@@ -255,34 +255,34 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Featured Events */}
             <div>
-              <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   <FiCalendar className="h-8 w-8 text-indigo-600" />
                   Featured Events
                 </h2>
-                <Link
-                  href="/events"
+            <Link
+              href="/events"
                   className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline font-medium"
-                >
+            >
                   View all <FiArrowRight size={16} />
-                </Link>
-              </div>
-              
-              {featuredEvents.length === 0 ? (
+            </Link>
+          </div>
+          
+          {featuredEvents.length === 0 ? (
                 <div className="text-center py-12 bg-gray-50 dark:bg-slate-900 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600">
                   <FiCalendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">No events yet</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6">
-                    Be the first to create an event in your community!
-                  </p>
-                  
-                  {currentUser && (
-                    <Link href="/events/create">
-                      <Button variant="primary">Create an Event</Button>
-                    </Link>
-                  )}
-                </div>
-              ) : (
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                Be the first to create an event in your community!
+              </p>
+              
+              {currentUser && (
+                <Link href="/events/create">
+                  <Button variant="primary">Create an Event</Button>
+                </Link>
+              )}
+            </div>
+          ) : (
                 <div className="space-y-4">
                   {featuredEvents.slice(0, 3).map((event: EventWithRelations) => (
                     <div key={event.id} className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -320,9 +320,9 @@ export default async function HomePage() {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+              ))}
+            </div>
+          )}
             </div>
 
             {/* Featured Issues */}

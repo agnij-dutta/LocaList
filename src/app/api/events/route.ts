@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
       registrationStart: event.registrationStart ? new Date(event.registrationStart) : null,
       registrationEnd: event.registrationEnd ? new Date(event.registrationEnd) : null,
     }));
-
+    
     return NextResponse.json({ events: processedEvents });
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -234,9 +234,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating event:', error);
-    return NextResponse.json(
+  return NextResponse.json(
       { message: 'Error creating event', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
-    );
+  );
   }
 } 
