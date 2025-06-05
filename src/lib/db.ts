@@ -20,6 +20,36 @@ export async function getDb() {
   return db;
 }
 
+// Migration function to handle schema updates
+async function runMigrations(db: Database) {
+  try {
+    // Check if isEmailVerified column exists, if not add it
+    const columns = await db.all("PRAGMA table_info(users)");
+    const hasIsEmailVerified = columns.some(col => col.name === 'isEmailVerified');
+    
+    if (!hasIsEmailVerified) {
+      await db.exec(`ALTER TABLE users ADD COLUMN isEmailVerified BOOLEAN NOT NULL DEFAULT 0`);
+      console.log('Added isEmailVerified column to users table');
+    }
+
+    // Check if otpCode column exists, if not add it
+    const hasOtpCode = columns.some(col => col.name === 'otpCode');
+    if (!hasOtpCode) {
+      await db.exec(`ALTER TABLE users ADD COLUMN otpCode TEXT`);
+      console.log('Added otpCode column to users table');
+    }
+
+    // Check if otpExpiry column exists, if not add it
+    const hasOtpExpiry = columns.some(col => col.name === 'otpExpiry');
+    if (!hasOtpExpiry) {
+      await db.exec(`ALTER TABLE users ADD COLUMN otpExpiry TEXT`);
+      console.log('Added otpExpiry column to users table');
+    }
+  } catch (error) {
+    console.error('Error running migrations:', error);
+  }
+}
+
 async function initializeDatabase(db: Database) {
   // Create Users table
   await db.exec(`
@@ -32,11 +62,30 @@ async function initializeDatabase(db: Database) {
       latitude REAL,
       longitude REAL,
       address TEXT,
+      isEmailVerified BOOLEAN NOT NULL DEFAULT 0,
+      otpCode TEXT,
+      otpExpiry TEXT,
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       isAdmin BOOLEAN NOT NULL DEFAULT 0,
       isVerifiedOrganizer BOOLEAN NOT NULL DEFAULT 0,
       isBanned BOOLEAN NOT NULL DEFAULT 0
+    )
+  `);
+  
+  // Run migrations to ensure compatibility with existing databases
+  await runMigrations(db);
+  
+  // Create Temporary Users table for OTP verification
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS temp_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      otpCode TEXT NOT NULL,
+      otpExpiry TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT
     )
   `);
   
@@ -301,8 +350,8 @@ export const userRepository = {
     const now = new Date().toISOString();
     
     const result = await db.run(
-      `INSERT INTO users (name, email, password, phone, latitude, longitude, address, createdAt, updatedAt, isAdmin, isVerifiedOrganizer, isBanned) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (name, email, password, phone, latitude, longitude, address, isEmailVerified, otpCode, otpExpiry, createdAt, updatedAt, isAdmin, isVerifiedOrganizer, isBanned) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.name,
         data.email,
@@ -311,6 +360,9 @@ export const userRepository = {
         data.latitude || null,
         data.longitude || null,
         data.address || null,
+        data.isEmailVerified || false,
+        data.otpCode || null,
+        data.otpExpiry || null,
         now,
         now,
         data.isAdmin || false,
@@ -357,6 +409,57 @@ export const userRepository = {
   delete: async ({ where }: { where: { id: number } }) => {
     const db = await getDb();
     return db.run('DELETE FROM users WHERE id = ?', where.id);
+  }
+};
+
+// Temporary User Repository Functions for OTP verification
+export const tempUserRepository = {
+  create: async ({ data }: { data: any }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    const result = await db.run(
+      `INSERT INTO temp_users (name, email, otpCode, otpExpiry, createdAt) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        data.name,
+        data.email,
+        data.otpCode,
+        data.otpExpiry,
+        now
+      ]
+    );
+    
+    return {
+      id: result.lastID,
+      ...data,
+      createdAt: now
+    };
+  },
+  
+  update: async ({ where, data }: { where: { email: string }; data: any }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    await db.run(
+      `UPDATE temp_users SET otpCode = ?, otpExpiry = ?, updatedAt = ? WHERE email = ?`,
+      [data.otpCode, data.otpExpiry, now, where.email]
+    );
+    
+    return {
+      ...data,
+      updatedAt: now
+    };
+  },
+  
+  findUnique: async ({ where }: { where: { email: string } }) => {
+    const db = await getDb();
+    return await db.get('SELECT * FROM temp_users WHERE email = ?', where.email);
+  },
+  
+  delete: async ({ where }: { where: { email: string } }) => {
+    const db = await getDb();
+    return db.run('DELETE FROM temp_users WHERE email = ?', where.email);
   }
 };
 
@@ -1382,6 +1485,7 @@ export const issuePhotoRepository = {
 // Default export
 const dbClient = {
   user: userRepository,
+  tempUser: tempUserRepository,
   event: eventRepository,
   interest: interestRepository,
   notification: notificationRepository,
