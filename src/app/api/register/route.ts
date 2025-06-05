@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { hashPassword } from "@/lib/server-utils";
+import { sendOTPEmail, generateOTP } from "@/lib/email";
 import { z } from "zod";
 
 // Validation schema
@@ -43,22 +44,51 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await hashPassword(password);
     
-    // Create user
-    const newUser = await db.user.create({
-      data: {
-        name,
-        email,
-        phone,
-        password: hashedPassword,
-      },
-    });
-    
-    // Remove password from the response
-    const { password: _, ...user } = newUser;
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    // Store user data temporarily with OTP
+    try {
+      await db.tempUser.create({
+        data: {
+          email,
+          name,
+          password: hashedPassword,
+          phone,
+          otpCode: otp,
+          otpExpiry: otpExpiry.toISOString(),
+          createdAt: new Date().toISOString(),
+        }
+      });
+    } catch (error) {
+      // If temp user already exists, update it
+      await db.tempUser.update({
+        where: { email },
+        data: {
+          name,
+          password: hashedPassword,
+          phone,
+          otpCode: otp,
+          otpExpiry: otpExpiry.toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      });
+    }
+
+    // Send OTP email
+    const emailResult = await sendOTPEmail(email, otp, name);
+
+    if (!emailResult.success) {
+      return NextResponse.json(
+        { message: 'Failed to send OTP email' },
+        { status: 500 }
+      );
+    }
     
     return NextResponse.json(
-      { message: "User registered successfully", user },
-      { status: 201 }
+      { message: "OTP sent to your email. Please verify to complete registration." },
+      { status: 200 }
     );
   } catch (error) {
     console.error("Registration error:", error);

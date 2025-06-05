@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
-import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, otp, password, phone, latitude, longitude, address } = await req.json();
+    const { email, otp } = await req.json();
 
-    if (!email || !otp || !password) {
+    if (!email || !otp) {
       return NextResponse.json(
-        { message: 'Email, OTP, and password are required' },
+        { message: 'Email and OTP are required' },
         { status: 400 }
       );
     }
@@ -58,19 +57,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create the user
+    // Create the user with data from temp user
     const user = await db.user.create({
       data: {
         name: tempUser.name,
         email: tempUser.email,
-        password: hashedPassword,
-        phone: phone || null,
-        latitude: latitude || null,
-        longitude: longitude || null,
-        address: address || null,
+        password: tempUser.password,
+        phone: tempUser.phone || null,
         isEmailVerified: true,
       }
     });

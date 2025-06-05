@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user already exists
+    // Check if user already exists (completed registration)
     const existingUser = await db.user.findUnique({
       where: { email }
     });
@@ -25,13 +25,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate OTP
+    // Check if there's already a temp user (for resend case)
+    const existingTempUser = await db.tempUser.findUnique({
+      where: { email }
+    });
+
+    // Generate new OTP
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-    // Store OTP in a temporary table or update user table
-    // For now, we'll use a simple approach with a temp users table
-    try {
+    if (existingTempUser) {
+      // Update existing temp user with new OTP (resend case)
+      await db.tempUser.update({
+        where: { email },
+        data: {
+          otpCode: otp,
+          otpExpiry: otpExpiry.toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      });
+    } else {
+      // This shouldn't happen in normal flow since temp user is created during registration
+      // But we'll handle it just in case
       await db.tempUser.create({
         data: {
           email,
@@ -39,16 +54,6 @@ export async function POST(req: NextRequest) {
           otpCode: otp,
           otpExpiry: otpExpiry.toISOString(),
           createdAt: new Date().toISOString(),
-        }
-      });
-    } catch (error) {
-      // If user already exists in temp table, update it
-      await db.tempUser.update({
-        where: { email },
-        data: {
-          otpCode: otp,
-          otpExpiry: otpExpiry.toISOString(),
-          updatedAt: new Date().toISOString(),
         }
       });
     }

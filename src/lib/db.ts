@@ -82,12 +82,33 @@ async function initializeDatabase(db: Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
+      password TEXT,
+      phone TEXT,
       otpCode TEXT NOT NULL,
       otpExpiry TEXT NOT NULL,
       createdAt TEXT NOT NULL,
       updatedAt TEXT
     )
   `);
+
+  // Check if temp_users table needs password and phone columns
+  try {
+    const tempUsersColumns = await db.all("PRAGMA table_info(temp_users)");
+    const hasPassword = tempUsersColumns.some(col => col.name === 'password');
+    const hasPhone = tempUsersColumns.some(col => col.name === 'phone');
+    
+    if (!hasPassword) {
+      await db.exec(`ALTER TABLE temp_users ADD COLUMN password TEXT`);
+      console.log('Added password column to temp_users table');
+    }
+    
+    if (!hasPhone) {
+      await db.exec(`ALTER TABLE temp_users ADD COLUMN phone TEXT`);
+      console.log('Added phone column to temp_users table');
+    }
+  } catch (error) {
+    console.error('Error updating temp_users table:', error);
+  }
   
   // Create Events table with enhanced features
   await db.exec(`
@@ -419,11 +440,13 @@ export const tempUserRepository = {
     const now = new Date().toISOString();
     
     const result = await db.run(
-      `INSERT INTO temp_users (name, email, otpCode, otpExpiry, createdAt) 
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO temp_users (name, email, password, phone, otpCode, otpExpiry, createdAt) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         data.name,
         data.email,
+        data.password || null,
+        data.phone || null,
         data.otpCode,
         data.otpExpiry,
         now
@@ -441,9 +464,37 @@ export const tempUserRepository = {
     const db = await getDb();
     const now = new Date().toISOString();
     
+    const updates = [];
+    const values = [];
+    
+    if (data.name !== undefined) {
+      updates.push('name = ?');
+      values.push(data.name);
+    }
+    if (data.password !== undefined) {
+      updates.push('password = ?');
+      values.push(data.password);
+    }
+    if (data.phone !== undefined) {
+      updates.push('phone = ?');
+      values.push(data.phone);
+    }
+    if (data.otpCode !== undefined) {
+      updates.push('otpCode = ?');
+      values.push(data.otpCode);
+    }
+    if (data.otpExpiry !== undefined) {
+      updates.push('otpExpiry = ?');
+      values.push(data.otpExpiry);
+    }
+    
+    updates.push('updatedAt = ?');
+    values.push(now);
+    values.push(where.email);
+    
     await db.run(
-      `UPDATE temp_users SET otpCode = ?, otpExpiry = ?, updatedAt = ? WHERE email = ?`,
-      [data.otpCode, data.otpExpiry, now, where.email]
+      `UPDATE temp_users SET ${updates.join(', ')} WHERE email = ?`,
+      values
     );
     
     return {
@@ -945,6 +996,29 @@ export const issueRepository = {
         queryParams.push(options.where.reporterId);
       }
       
+      // Handle OR search conditions
+      if (options.where.OR && Array.isArray(options.where.OR)) {
+        const orConditions = options.where.OR.map((condition: any) => {
+          if (condition.title?.contains) {
+            queryParams.push(`%${condition.title.contains}%`);
+            return 'title LIKE ?';
+          }
+          if (condition.description?.contains) {
+            queryParams.push(`%${condition.description.contains}%`);
+            return 'description LIKE ?';
+          }
+          if (condition.location?.contains) {
+            queryParams.push(`%${condition.location.contains}%`);
+            return 'location LIKE ?';
+          }
+          return null;
+        }).filter(Boolean);
+        
+        if (orConditions.length > 0) {
+          whereConditions.push(`(${orConditions.join(' OR ')})`);
+        }
+      }
+      
       if (whereConditions.length > 0) {
         query += ' WHERE ' + whereConditions.join(' AND ');
       }
@@ -967,6 +1041,7 @@ export const issueRepository = {
     // Filter by location if specified
     if (options.userLocation && options.maxDistance) {
       issues = issues.filter(issue => {
+        if (!issue.latitude || !issue.longitude) return false;
         const distance = locationUtils.calculateDistance(
           options.userLocation!.latitude,
           options.userLocation!.longitude,
@@ -1482,22 +1557,22 @@ export const issuePhotoRepository = {
   }
 };
 
-// Default export
+// Create a default export for the db connection with all repositories
 const dbClient = {
   user: userRepository,
   tempUser: tempUserRepository,
   event: eventRepository,
-  interest: interestRepository,
-  notification: notificationRepository,
+  eventPhoto: eventPhotoRepository,
   eventVote: eventVoteRepository,
   eventFollower: eventFollowerRepository,
-  eventPhoto: eventPhotoRepository,
-  issue: issueRepository,
-  issueVote: issueVoteRepository,
-  issuePhoto: issuePhotoRepository,
-  issueStatusUpdate: issueStatusUpdateRepository,
   eventFeedback: eventFeedbackRepository,
-  violationReport: violationReportRepository
+  issue: issueRepository,
+  issuePhoto: issuePhotoRepository,
+  issueVote: issueVoteRepository,
+  issueStatusUpdate: issueStatusUpdateRepository,
+  interest: interestRepository,
+  notification: notificationRepository,
+  violationReport: violationReportRepository,
 };
 
 export default dbClient; 

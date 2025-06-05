@@ -8,8 +8,10 @@ import Button from '@/components/ui/Button';
 import EventCard from '@/components/events/EventCard';
 import EventFilters from '@/components/events/EventFilters';
 import MapView from '@/components/maps/MapView';
+import LocationRequestBanner from '@/components/ui/LocationRequestBanner';
 import { eventRepository, issueRepository } from '@/lib/db';
 import { FiList, FiMap } from 'react-icons/fi';
+import TabNavigation from '@/components/ui/TabNavigation';
 
 export const metadata: Metadata = {
   title: 'Explore - LocaList',
@@ -80,36 +82,40 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 // Simple IssueCard component placeholder
 function IssueCard({ issue, currentUserId }: { issue: any; currentUserId?: string | number }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {issue.title}
-        </h3>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-          issue.status === 'Resolved' 
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            : issue.status === 'In Progress'
-            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-        }`}>
-          {issue.status}
-        </span>
-      </div>
-      
-      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
-        {issue.description}
-      </p>
-      
-      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-        <span>{issue.category}</span>
-        <div className="flex items-center space-x-4">
-          <span>👍 {issue.upvotes || 0}</span>
-          <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
+    <Link href={`/issues/${issue.id}`} className="block">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {issue.title}
+          </h3>
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+            issue.status === 'Resolved' 
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+              : issue.status === 'In Progress'
+              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+          }`}>
+            {issue.status}
+          </span>
+        </div>
+        
+        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
+          {issue.description}
+        </p>
+        
+        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+          <span>{issue.category}</span>
+          <div className="flex items-center space-x-4">
+            <span>👍 {issue.upvotes || 0}</span>
+            <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
+
+
 
 interface PageProps {
   searchParams: Promise<{
@@ -266,30 +272,7 @@ export default async function ExplorePage({ searchParams }: PageProps) {
             {/* Tab Navigation with View Toggle */}
             <div className="mb-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="border-b border-gray-200 dark:border-gray-700">
-                  <nav className="-mb-px flex space-x-8">
-                    <Link
-                      href={`?tab=events&view=${view}${search ? `&search=${search}` : ''}${category ? `&category=${category}` : ''}${dateRange ? `&dateRange=${dateRange}` : ''}${distance ? `&distance=${distance}` : ''}${latitude ? `&latitude=${latitude}` : ''}${longitude ? `&longitude=${longitude}` : ''}`}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        tab === 'events'
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      Events
-                    </Link>
-                    <Link
-                      href={`?tab=issues&view=${view}${search ? `&search=${search}` : ''}${category ? `&category=${category}` : ''}${status ? `&status=${status}` : ''}${distance ? `&distance=${distance}` : ''}${latitude ? `&latitude=${latitude}` : ''}${longitude ? `&longitude=${longitude}` : ''}`}
-                      className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                        tab === 'issues'
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      Issues
-                    </Link>
-                  </nav>
-                </div>
+                <TabNavigation currentTab={tab} currentView={view} />
 
                 {/* View Toggle */}
                 <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
@@ -321,9 +304,13 @@ export default async function ExplorePage({ searchParams }: PageProps) {
 
             {/* Filters */}
             <EventFilters 
+              currentTab={tab}
               userLocation={userLocation}
               className="mb-8"
             />
+
+            {/* Location Request Notice */}
+            {!userLocation && <LocationRequestBanner tab={tab} />}
 
             {/* Results Summary */}
             <div className="mb-6">
@@ -354,12 +341,13 @@ export default async function ExplorePage({ searchParams }: PageProps) {
           
             {/* Content based on active tab and view */}
             {view === 'map' ? (
-              <MapView
-                events={tab === 'events' ? events : []}
-                issues={tab === 'issues' ? issues : []}
-                userLocation={userLocation}
-                className="h-[600px] w-full"
-              />
+              <div className="h-96 rounded-lg overflow-hidden">
+                <MapView
+                  events={tab === 'events' ? events : []}
+                  issues={tab === 'issues' ? issues : []}
+                  userLocation={userLocation}
+                />
+              </div>
             ) : (
               <>
                 {/* List View Content */}
@@ -379,7 +367,7 @@ export default async function ExplorePage({ searchParams }: PageProps) {
                               href="/events/create"
                               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                             >
-                              Create an Event
+                              Create Event
                             </Link>
                           )}
                         </div>
@@ -409,26 +397,43 @@ export default async function ExplorePage({ searchParams }: PageProps) {
                           <p className="text-muted-foreground mb-6">
                             Try adjusting your search criteria or filters to find issues.
                           </p>
-          {currentUser && (
+                          {currentUser && (
                             <Link
                               href="/issues/create"
                               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                             >
                               Report an Issue
-            </Link>
-          )}
-        </div>
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {issues.map((issue) => (
-                          <IssueCard 
-                            key={issue.id} 
-                            issue={issue} 
-                            currentUserId={currentUser?.id}
-                          />
-                        ))}
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center mb-6">
+                          <div>
+                            <p className="text-muted-foreground">
+                              Found {issues.length} issue{issues.length === 1 ? '' : 's'}
+                            </p>
+                          </div>
+                          {currentUser && (
+                            <Link
+                              href="/issues/create"
+                              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                            >
+                              + Report Issue
+                            </Link>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {issues.map((issue) => (
+                            <IssueCard 
+                              key={issue.id} 
+                              issue={issue} 
+                              currentUserId={currentUser?.id}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </>
                 )}

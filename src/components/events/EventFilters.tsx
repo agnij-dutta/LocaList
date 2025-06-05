@@ -14,11 +14,12 @@ const filterSchema = z.object({
   category: z.string().optional(),
   dateRange: z.string().optional(),
   distance: z.string().optional(),
+  status: z.string().optional(),
 });
 
 type FilterValues = z.infer<typeof filterSchema>;
 
-const CATEGORY_OPTIONS = [
+const EVENT_CATEGORY_OPTIONS = [
   { value: '', label: 'All Categories' },
   { value: 'Garage Sales', label: 'Garage Sales' },
   { value: 'Sports Matches', label: 'Sports Matches' },
@@ -27,6 +28,24 @@ const CATEGORY_OPTIONS = [
   { value: 'Exhibitions', label: 'Exhibitions' },
   { value: 'Small Festivals', label: 'Small Festivals' },
   { value: 'Lost & Found', label: 'Lost & Found' },
+];
+
+const ISSUE_CATEGORY_OPTIONS = [
+  { value: '', label: 'All Categories' },
+  { value: 'Roads', label: 'Roads & Infrastructure' },
+  { value: 'Lighting', label: 'Street Lighting' },
+  { value: 'Water Supply', label: 'Water Supply & Drainage' },
+  { value: 'Cleanliness', label: 'Cleanliness & Waste' },
+  { value: 'Public Safety', label: 'Public Safety' },
+  { value: 'Obstructions', label: 'Obstructions' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'Reported', label: 'Reported' },
+  { value: 'In Progress', label: 'In Progress' },
+  { value: 'Under Review', label: 'Under Review' },
+  { value: 'Resolved', label: 'Resolved' },
 ];
 
 const DATE_RANGE_OPTIONS = [
@@ -51,12 +70,14 @@ const DISTANCE_OPTIONS = [
 ];
 
 interface EventFiltersProps {
+  currentTab?: string;
   userLocation?: { latitude: number; longitude: number } | null;
   onFiltersChange?: (filters: FilterValues) => void;
   className?: string;
 }
 
 export default function EventFilters({ 
+  currentTab = 'events',
   userLocation, 
   onFiltersChange,
   className = '' 
@@ -80,11 +101,22 @@ export default function EventFilters({
       category: searchParams.get('category') || '',
       dateRange: searchParams.get('dateRange') || '',
       distance: searchParams.get('distance') || '',
+      status: searchParams.get('status') || '',
     },
   });
 
   // Watch all form values
   const watchedValues = watch();
+
+  // Reset inappropriate filters when tab changes
+  useEffect(() => {
+    if (currentTab === 'events' && watchedValues.status) {
+      setValue('status', '');
+    }
+    if (currentTab === 'issues' && watchedValues.dateRange) {
+      setValue('dateRange', '');
+    }
+  }, [currentTab, setValue, watchedValues.status, watchedValues.dateRange]);
 
   // Update active filters state
   useEffect(() => {
@@ -105,11 +137,13 @@ export default function EventFilters({
   }, [watch, onFiltersChange]);
 
   const updateURL = (filters: FilterValues) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams.toString());
     
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value.trim() !== '') {
         params.set(key, value);
+      } else {
+        params.delete(key);
       }
     });
 
@@ -136,6 +170,7 @@ export default function EventFilters({
       category: '',
       dateRange: '',
       distance: '',
+      status: '',
     });
     setIsExpanded(false);
   };
@@ -143,6 +178,10 @@ export default function EventFilters({
   const clearFilter = (filterName: keyof FilterValues) => {
     setValue(filterName, '');
   };
+
+  // Get the appropriate category options based on current tab
+  const categoryOptions = currentTab === 'issues' ? ISSUE_CATEGORY_OPTIONS : EVENT_CATEGORY_OPTIONS;
+  const searchPlaceholder = currentTab === 'issues' ? 'Search issues...' : 'Search events...';
 
   return (
     <div className={`bg-card border rounded-lg shadow-sm ${className}`}>
@@ -176,7 +215,7 @@ export default function EventFilters({
             <input
               {...register('search')}
               type="text"
-              placeholder="Search events..."
+              placeholder={searchPlaceholder}
               className="input-field pl-10"
             />
             {watchedValues.search && (
@@ -191,7 +230,7 @@ export default function EventFilters({
           </div>
 
           {/* Filter Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Category Filter */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
@@ -203,7 +242,7 @@ export default function EventFilters({
                   {...register('category')}
                   className="input-field appearance-none cursor-pointer"
                 >
-                  {CATEGORY_OPTIONS.map((option) => (
+                  {categoryOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -221,34 +260,67 @@ export default function EventFilters({
               </div>
             </div>
 
-            {/* Date Range Filter */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                <FiCalendar className="h-4 w-4" />
-                When
-              </label>
-              <div className="relative">
-                <select
-                  {...register('dateRange')}
-                  className="input-field appearance-none cursor-pointer"
-                >
-                  {DATE_RANGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {watchedValues.dateRange && (
-                  <button
-                    type="button"
-                    onClick={() => clearFilter('dateRange')}
-                    className="absolute right-8 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            {/* Date Range Filter (only for events) */}
+            {currentTab === 'events' && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                  <FiCalendar className="h-4 w-4" />
+                  When
+                </label>
+                <div className="relative">
+                  <select
+                    {...register('dateRange')}
+                    className="input-field appearance-none cursor-pointer"
                   >
-                    <FiX className="h-4 w-4" />
-                  </button>
-                )}
+                    {DATE_RANGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {watchedValues.dateRange && (
+                    <button
+                      type="button"
+                      onClick={() => clearFilter('dateRange')}
+                      className="absolute right-8 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <FiX className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Status Filter (only for issues) */}
+            {currentTab === 'issues' && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                  <FiTag className="h-4 w-4" />
+                  Status
+                </label>
+                <div className="relative">
+                  <select
+                    {...register('status')}
+                    className="input-field appearance-none cursor-pointer"
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {watchedValues.status && (
+                    <button
+                      type="button"
+                      onClick={() => clearFilter('status')}
+                      className="absolute right-8 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <FiX className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Distance Filter */}
             <div>
@@ -290,22 +362,12 @@ export default function EventFilters({
 
           {/* Active Filters Display */}
           {hasActiveFilters && (
-            <div className="pt-2 border-t">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">Active Filters:</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearAllFilters}
-                  className="text-muted-foreground hover:text-foreground h-auto p-1 text-sm"
-                >
-                  Clear All
-                </Button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+              <span className="text-sm text-muted-foreground">Active filters:</span>
               <div className="flex flex-wrap gap-2">
                 {watchedValues.search && (
                   <span className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1 text-sm">
-                    Search: "{watchedValues.search}"
+                    "{watchedValues.search}"
                     <button
                       type="button"
                       onClick={() => clearFilter('search')}
@@ -317,7 +379,7 @@ export default function EventFilters({
                 )}
                 {watchedValues.category && (
                   <span className="inline-flex items-center gap-1 bg-secondary/10 text-secondary-foreground rounded-full px-3 py-1 text-sm">
-                    {CATEGORY_OPTIONS.find(opt => opt.value === watchedValues.category)?.label}
+                    {categoryOptions.find(opt => opt.value === watchedValues.category)?.label}
                     <button
                       type="button"
                       onClick={() => clearFilter('category')}
@@ -339,6 +401,18 @@ export default function EventFilters({
                     </button>
                   </span>
                 )}
+                {watchedValues.status && (
+                  <span className="inline-flex items-center gap-1 bg-destructive/10 text-destructive-foreground rounded-full px-3 py-1 text-sm">
+                    {STATUS_OPTIONS.find(opt => opt.value === watchedValues.status)?.label}
+                    <button
+                      type="button"
+                      onClick={() => clearFilter('status')}
+                      className="hover:bg-destructive/20 rounded-full p-0.5"
+                    >
+                      <FiX className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
                 {watchedValues.distance && userLocation && (
                   <span className="inline-flex items-center gap-1 bg-muted/10 text-muted-foreground rounded-full px-3 py-1 text-sm">
                     {DISTANCE_OPTIONS.find(opt => opt.value === watchedValues.distance)?.label}
@@ -352,6 +426,15 @@ export default function EventFilters({
                   </span>
                 )}
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Clear all
+              </Button>
             </div>
           )}
         </div>
