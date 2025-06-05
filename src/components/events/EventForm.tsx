@@ -18,28 +18,50 @@ const eventFormSchema = z.object({
   title: z.string().min(3, "Event name must be at least 3 characters"),
   location: z.string().min(3, "Location is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  startDate: z.string().refine(val => !!val, "Start date is required"),
+  startDate: z.string().refine(val => {
+    if (!val) return false;
+    const selectedDate = new Date(val);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  }, "Start date cannot be in the past"),
   startTime: z.string().refine(val => !!val, "Start time is required"),
-  endDate: z.string().optional(),
+  endDate: z.string().optional().refine(val => {
+    if (!val) return true; // Optional field
+    const selectedDate = new Date(val);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  }, "End date cannot be in the past"),
   endTime: z.string().optional(),
   category: z.string().min(1, "Category is required"),
   registrationStartDate: z.string().optional(),
   registrationStartTime: z.string().optional(),
   registrationEndDate: z.string().optional(),
   registrationEndTime: z.string().optional(),
+}).refine(data => {
+  // Validate end date is after start date
+  if (data.endDate && data.startDate) {
+    const startDateTime = new Date(`${data.startDate}T${data.startTime || '00:00'}`);
+    const endDateTime = new Date(`${data.endDate}T${data.endTime || '23:59'}`);
+    return endDateTime > startDateTime;
+  }
+  return true;
+}, {
+  message: "End date and time must be after start date and time",
+  path: ["endDate"]
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
 const CATEGORY_OPTIONS = [
-  { value: 'sports', label: 'Sports' },
-  { value: 'music', label: 'Music & Concerts' },
-  { value: 'food', label: 'Food & Drink' },
-  { value: 'arts', label: 'Arts & Culture' },
-  { value: 'networking', label: 'Networking' },
-  { value: 'education', label: 'Education' },
-  { value: 'charity', label: 'Charity & Causes' },
-  { value: 'other', label: 'Other' },
+  { value: 'Garage Sales', label: 'Garage Sales' },
+  { value: 'Sports Matches', label: 'Sports Matches' },
+  { value: 'Community Classes', label: 'Community Classes' },
+  { value: 'Volunteer Opportunities', label: 'Volunteer Opportunities' },
+  { value: 'Exhibitions', label: 'Exhibitions' },
+  { value: 'Small Festivals', label: 'Small Festivals' },
+  { value: 'Lost & Found', label: 'Lost & Found' },
 ];
 
 interface EventFormProps {
@@ -55,12 +77,16 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   const [isSubmitting, setIsSubmitting] = useState(propSubmitting);
   const [error, setError] = useState<string | null>(null);
 
+  // Get today's date in YYYY-MM-DD format for min attribute
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const currentTime = format(new Date(), 'HH:mm');
+
   const defaultValues: Partial<EventFormValues> = {
     title: '',
     location: '',
     description: '',
-    startDate: format(new Date(), 'yyyy-MM-dd'),
-    startTime: format(new Date(), 'HH:mm'),
+    startDate: today,
+    startTime: currentTime,
     category: '',
     ...initialData,
   };
@@ -75,6 +101,9 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
     resolver: zodResolver(eventFormSchema),
     defaultValues,
   });
+
+  const watchStartDate = watch('startDate');
+  const watchStartTime = watch('startTime');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,6 +120,16 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   const processForm = async (data: EventFormValues) => {
     setIsSubmitting(true);
     setError(null);
+    
+    // Additional validation for current date and time
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}`);
+    const now = new Date();
+    
+    if (startDateTime <= now) {
+      setError('Event start date and time must be in the future');
+      setIsSubmitting(false);
+      return;
+    }
     
     // Create form data
     const formData = new FormData();
@@ -134,7 +173,7 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
       
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-foreground mb-1">
             Event Name
           </label>
           <Input
@@ -146,7 +185,7 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
         </div>
 
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1">
             Location
           </label>
           <Input
@@ -158,7 +197,7 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-foreground mb-1">
             Description
           </label>
           <Textarea
@@ -172,18 +211,19 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="startDate" className="block text-sm font-medium text-foreground mb-1">
               Start Date
             </label>
             <Input
               type="date"
               id="startDate"
               {...register('startDate')}
+              min={today}
               error={errors.startDate?.message}
             />
           </div>
           <div>
-            <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="startTime" className="block text-sm font-medium text-foreground mb-1">
               Start Time
             </label>
             <Input
@@ -195,20 +235,46 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
           </div>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="endDate" className="block text-sm font-medium text-foreground mb-1">
+              End Date (Optional)
+            </label>
+            <Input
+              type="date"
+              id="endDate"
+              {...register('endDate')}
+              min={watchStartDate || today}
+              error={errors.endDate?.message}
+            />
+          </div>
+          <div>
+            <label htmlFor="endTime" className="block text-sm font-medium text-foreground mb-1">
+              End Time (Optional)
+            </label>
+            <Input
+              type="time"
+              id="endTime"
+              {...register('endTime')}
+              error={errors.endTime?.message}
+            />
+          </div>
+        </div>
+
         <div>
-          <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="image" className="block text-sm font-medium text-foreground mb-1">
             Photos
           </label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-border border-dashed rounded-md">
             <div className="space-y-1 text-center">
               {imagePreview ? (
                 <div className="mb-3">
                   <img src={imagePreview} alt="Preview" className="mx-auto h-32 object-cover rounded-md" />
                 </div>
               ) : (
-                <FaUpload className="mx-auto h-12 w-12 text-gray-400" />
+                <FaUpload className="mx-auto h-12 w-12 text-muted-foreground" />
               )}
-              <div className="flex text-sm text-gray-600">
+              <div className="flex text-sm text-muted-foreground">
                 <label
                   htmlFor="image-upload"
                   className="relative cursor-pointer bg-purple-600 py-2 px-4 rounded-md font-medium text-white hover:bg-purple-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500"
@@ -229,7 +295,7 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
         </div>
 
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="category" className="block text-sm font-medium text-foreground mb-1">
             Category
           </label>
           <Select
@@ -242,21 +308,22 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
         </div>
 
         <div>
-          <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">Registration Period</h3>
+          <h3 className="text-lg font-medium text-foreground mb-2">Registration Period (Optional)</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="registrationStartDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="registrationStartDate" className="block text-sm font-medium text-foreground mb-1">
                 Registration Start Date
               </label>
               <Input
                 type="date"
                 id="registrationStartDate"
                 {...register('registrationStartDate')}
+                min={today}
                 error={errors.registrationStartDate?.message}
               />
             </div>
             <div>
-              <label htmlFor="registrationStartTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="registrationStartTime" className="block text-sm font-medium text-foreground mb-1">
                 Registration Start Time
               </label>
               <Input
@@ -264,6 +331,31 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
                 id="registrationStartTime"
                 {...register('registrationStartTime')}
                 error={errors.registrationStartTime?.message}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label htmlFor="registrationEndDate" className="block text-sm font-medium text-foreground mb-1">
+                Registration End Date
+              </label>
+              <Input
+                type="date"
+                id="registrationEndDate"
+                {...register('registrationEndDate')}
+                min={today}
+                error={errors.registrationEndDate?.message}
+              />
+            </div>
+            <div>
+              <label htmlFor="registrationEndTime" className="block text-sm font-medium text-foreground mb-1">
+                Registration End Time
+              </label>
+              <Input
+                type="time"
+                id="registrationEndTime"
+                {...register('registrationEndTime')}
+                error={errors.registrationEndTime?.message}
               />
             </div>
           </div>

@@ -66,7 +66,7 @@ export default async function HomePage() {
   let featuredIssues = [];
   
   try {
-    // Test database connection by attempting to create it
+    // Show only approved events for quality control
     const dbTest = await db.event.findMany({
       where: {
         isApproved: true,
@@ -129,11 +129,11 @@ export default async function HomePage() {
                 <Link href="/events">
                   <Button variant="secondary" size="lg" className="flex items-center gap-2 bg-white text-indigo-600 hover:bg-gray-100">
                     <FiCalendar className="h-5 w-5" />
-                    Explore Events
+                    Explore Community
                   </Button>
                 </Link>
                 
-                <Link href="/issues">
+                <Link href="/events?tab=issues">
                     <Button variant="outline" size="lg" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/40">
                     <FiAlertTriangle className="h-5 w-5" />
                     Report Issues

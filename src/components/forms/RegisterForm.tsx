@@ -13,7 +13,16 @@ import Link from 'next/link';
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
-  phone: z.string().optional(),
+  phone: z.string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true; // Allow empty
+      // Regex for international phone numbers (10-15 digits, optional country code)
+      const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+      return phoneRegex.test(val.replace(/[-\s\(\)]/g, ''));
+    }, {
+      message: "Please enter a valid phone number (10-15 digits)"
+    }),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {

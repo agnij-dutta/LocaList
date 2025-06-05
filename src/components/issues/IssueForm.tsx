@@ -167,8 +167,8 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
       const result = await onSubmit(formData);
       
       if (result.success && result.issueId) {
-        // Navigate to the issues page on success
-        router.push('/issues');
+        // Navigate to the explore page with issues tab on success
+        router.push('/events?tab=issues');
       } else if (result.error) {
         setError(result.error);
         setIsSubmitting(false);

@@ -15,7 +15,7 @@ export default async function RegisterPage() {
   const currentUser = await getCurrentUser();
   
   if (currentUser) {
-    redirect('/events');
+    redirect('/');
   }
   
   return (

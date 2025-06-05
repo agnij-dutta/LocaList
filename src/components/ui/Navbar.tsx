@@ -43,7 +43,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
               href="/events" 
               className="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-2 rounded-md text-sm font-medium"
             >
-              Explore Events
+              Explore
             </Link>
             
             {currentUser ? (
@@ -145,7 +145,7 @@ export default function Navbar({ currentUser }: NavbarProps) {
             className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
             onClick={toggleMenu}
           >
-            Explore Events
+            Explore
           </Link>
           
           {currentUser && (
