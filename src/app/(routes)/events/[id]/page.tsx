@@ -10,6 +10,7 @@ import BaseLayout from '@/components/layouts/BaseLayout';
 import Container from '@/components/ui/Container';
 import Button from '@/components/ui/Button';
 import RegisterForm from '@/components/events/RegisterForm';
+import EventActions from '@/components/events/EventActions';
 
 export const generateMetadata = async ({ params }: { params: { id: string } }): Promise<Metadata> => {
   const resolvedParams = await Promise.resolve(params);
@@ -104,7 +105,13 @@ export default async function EventDetailPage({ params }: { params: { id: string
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2 space-y-6">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">{event.title}</h1>
+                <div className="flex items-start justify-between mb-3">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{event.title}</h1>
+                  <EventActions 
+                    eventId={event.id} 
+                    currentUserId={currentUser?.id ? parseInt(currentUser.id) : undefined}
+                  />
+                </div>
                 <div className="flex flex-wrap gap-4 text-gray-600 dark:text-gray-300 mb-6">
                   <div className="flex items-center">
                     <FaMapMarkerAlt className="mr-2" />
@@ -126,7 +133,7 @@ export default async function EventDetailPage({ params }: { params: { id: string
                   
                   <div className="flex items-center">
                     <FaUser className="mr-2" />
-                    <span>{event.organizer.name}</span>
+                    <span>{event.organizer?.name || 'Unknown'}</span>
                   </div>
                 </div>
               </div>

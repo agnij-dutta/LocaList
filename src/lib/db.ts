@@ -1727,6 +1727,18 @@ export const violationReportRepository = {
         conditions.push('status = ?');
         params.push(options.where.status);
       }
+      if (options.where.contentType) {
+        conditions.push('contentType = ?');
+        params.push(options.where.contentType);
+      }
+      if (options.where.contentId) {
+        conditions.push('contentId = ?');
+        params.push(options.where.contentId);
+      }
+      if (options.where.reportedById) {
+        conditions.push('reportedById = ?');
+        params.push(options.where.reportedById);
+      }
       if (conditions.length > 0) {
         query += ' WHERE ' + conditions.join(' AND ');
       }

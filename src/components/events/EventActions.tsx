@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Button from '@/components/ui/Button';
 import { FiFlag, FiShare2, FiUserPlus, FiUserMinus } from 'react-icons/fi';
+import { FaFlag } from 'react-icons/fa';
+import ReportForm from './ReportForm';
 
 interface EventActionsProps {
   eventId: number;
@@ -21,6 +23,7 @@ export default function EventActions({
 }: EventActionsProps) {
   const [isRegistered, setIsRegistered] = useState(initialIsRegistered);
   const [loading, setLoading] = useState<string | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
 
   const handleRegister = async () => {
     if (!currentUserId) return;
@@ -76,38 +79,26 @@ export default function EventActions({
     }
   };
 
-  const handleReport = async () => {
-    if (!currentUserId) return;
-    
-    const reason = prompt('Please provide a reason for reporting this event:');
-    if (!reason) return;
-
-    setLoading('report');
+  const handleReport = async (reason: string, description: string) => {
     try {
-      const response = await fetch('/api/reports', {
+      const response = await fetch(`/api/events/${eventId}/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          contentType: 'event',
-          contentId: eventId,
-          reason,
-          description: reason,
-        }),
+        body: JSON.stringify({ reason, description }),
       });
 
-      if (response.ok) {
-        alert('Event reported successfully. Thank you for helping keep our community safe.');
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to report event');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit report');
       }
+
+      // Show success message (you might want to add a toast notification here)
+      alert('Report submitted successfully. Thank you for helping keep our community safe.');
     } catch (error) {
-      console.error('Error reporting event:', error);
-      alert('Failed to report event');
-    } finally {
-      setLoading(null);
+      console.error('Error submitting report:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit report');
     }
   };
 
@@ -155,12 +146,20 @@ export default function EventActions({
         variant="outline"
         size="sm"
         className="flex items-center gap-2"
-        onClick={handleReport}
+        onClick={() => setShowReportForm(true)}
         disabled={loading === 'report'}
       >
-        <FiFlag className="w-4 h-4" />
+        <FaFlag className="w-4 h-4" />
         Report
       </Button>
+
+      {showReportForm && (
+        <ReportForm
+          eventId={eventId}
+          onClose={() => setShowReportForm(false)}
+          onSubmit={handleReport}
+        />
+      )}
     </div>
   );
 } 
