@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { issueRepository, userRepository, issueCategoryRepository, issuePhotoRepository, issueStatusUpdateRepository } from "@/lib/db";
 import { getServerSession } from "next-auth";
 
 export async function GET(req: NextRequest) {
@@ -51,10 +51,10 @@ export async function GET(req: NextRequest) {
     }
     
     // Fetch issues with conditions
-    const issues = await db.issue.findMany(options);
+    const issues = await issueRepository.findMany(options);
     
     // Process the issues for frontend consumption
-    const processedIssues = issues.map(issue => ({
+    const processedIssues = issues.map((issue: any) => ({
       ...issue,
       createdAt: new Date(issue.createdAt),
       updatedAt: new Date(issue.updatedAt),
@@ -98,7 +98,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate category against database
-    const { issueCategoryRepository } = await import('@/lib/db');
     const categoryExists = await issueCategoryRepository.findUnique({
       where: { name: data.category }
     });
@@ -117,7 +116,7 @@ export async function POST(req: NextRequest) {
       const session = await getServerSession();
       
       if (session?.user?.email) {
-        const user = await db.user.findUnique({
+        const user = await userRepository.findUnique({
           where: { email: session.user.email }
         });
 
@@ -128,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create the issue
-    const issue = await db.issue.create({
+    const issue = await issueRepository.create({
       data: {
         title: data.title,
         description: data.description,
@@ -145,7 +144,7 @@ export async function POST(req: NextRequest) {
     // Add photos if provided
     if (data.photos && Array.isArray(data.photos)) {
       for (const photoUrl of data.photos) {
-        await db.issuePhoto.create({
+        await issuePhotoRepository.create({
           data: {
             issueId: issue.id,
             imageUrl: photoUrl
@@ -155,7 +154,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create initial status update
-    await db.issueStatusUpdate.create({
+    await issueStatusUpdateRepository.create({
       data: {
         issueId: issue.id,
         status: 'Reported',
