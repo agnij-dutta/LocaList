@@ -12,6 +12,7 @@ import LocationRequestBanner from '@/components/ui/LocationRequestBanner';
 import { eventRepository, issueRepository } from '@/lib/db';
 import { FiList, FiMap } from 'react-icons/fi';
 import TabNavigation from '@/components/ui/TabNavigation';
+import Pagination from '@/components/ui/Pagination';
 
 export const metadata: Metadata = {
   title: 'Explore - LocaList',
@@ -115,10 +116,8 @@ function IssueCard({ issue, currentUserId }: { issue: any; currentUserId?: strin
   );
 }
 
-
-
 interface PageProps {
-  searchParams: Promise<{
+  searchParams: {
     tab?: string;
     view?: string;
     search?: string;
@@ -128,7 +127,8 @@ interface PageProps {
     latitude?: string;
     longitude?: string;
     status?: string;
-  }>;
+    page?: string;
+  };
 }
 
 export default async function ExplorePage({ searchParams }: PageProps) {
@@ -144,6 +144,7 @@ export default async function ExplorePage({ searchParams }: PageProps) {
     latitude,
     longitude,
     status = '',
+    page = '1',
   } = await searchParams;
 
   // Apply distance filtering if coordinates are provided
@@ -156,23 +157,28 @@ export default async function ExplorePage({ searchParams }: PageProps) {
   }
 
   const maxDistance = distance ? parseInt(distance) : undefined;
+  const currentPage = parseInt(page);
+  const itemsPerPage = 9;
+  const offset = (currentPage - 1) * itemsPerPage;
 
   try {
     let events: any[] = [];
     let issues: any[] = [];
+    let totalEvents = 0;
+    let totalIssues = 0;
 
     if (tab === 'events' || tab === 'all') {
       // Build the query conditions for events
       const eventWhere: any = {
-    isApproved: true,
+        isApproved: true,
         isFlagged: false,
-    startDate: {
-      gte: new Date(), // Only show upcoming events
-    },
-  };
-  
-  // Add search condition if provided
-  if (search) {
+        startDate: {
+          gte: new Date(), // Only show upcoming events
+        },
+      };
+      
+      // Add search condition if provided
+      if (search) {
         eventWhere.OR = [
           { title: { contains: search } },
           { description: { contains: search } },
@@ -196,6 +202,13 @@ export default async function ExplorePage({ searchParams }: PageProps) {
         }
       }
 
+      // Get total count for pagination
+      totalEvents = await eventRepository.count({
+        where: eventWhere,
+        userLocation,
+        maxDistance,
+      });
+
       events = await eventRepository.findMany({
         where: eventWhere,
         include: {
@@ -208,6 +221,8 @@ export default async function ExplorePage({ searchParams }: PageProps) {
         orderBy: {
           urgency: 'desc'
         },
+        take: itemsPerPage,
+        skip: offset,
         userLocation,
         maxDistance,
       });
@@ -238,22 +253,31 @@ export default async function ExplorePage({ searchParams }: PageProps) {
         issueWhere.status = status;
       }
 
+      // Get total count for pagination
+      totalIssues = await issueRepository.count({
+        where: issueWhere,
+        userLocation,
+        maxDistance,
+      });
+
       issues = await issueRepository.findMany({
         where: issueWhere,
-      include: {
+        include: {
           reporter: true,
           photos: true,
           votes: true,
           followers: true,
           statusUpdates: true,
-      },
-      orderBy: {
+        },
+        orderBy: {
           createdAt: 'desc'
-      },
+        },
+        take: itemsPerPage,
+        skip: offset,
         userLocation,
         maxDistance,
-    });
-  }
+      });
+    }
   
   return (
     <BaseLayout currentUser={currentUser}>
@@ -383,6 +407,16 @@ export default async function ExplorePage({ searchParams }: PageProps) {
                         ))}
                       </div>
                     )}
+
+                    {/* Pagination for Events */}
+                    {events.length > 0 && (
+                      <Pagination 
+                        currentPage={currentPage}
+                        totalItems={totalEvents}
+                        itemsPerPage={itemsPerPage}
+                        baseUrl="/events"
+                      />
+                    )}
                   </>
                 )}
 
@@ -415,15 +449,15 @@ export default async function ExplorePage({ searchParams }: PageProps) {
                               Found {issues.length} issue{issues.length === 1 ? '' : 's'}
                             </p>
                           </div>
-                          {currentUser && (
+          {currentUser && (
                             <Link
                               href="/issues/create"
                               className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                             >
                               + Report Issue
-                            </Link>
-                          )}
-                        </div>
+            </Link>
+          )}
+        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {issues.map((issue) => (
                             <IssueCard 
@@ -433,6 +467,14 @@ export default async function ExplorePage({ searchParams }: PageProps) {
                             />
                           ))}
                         </div>
+
+                        {/* Pagination for Issues */}
+                        <Pagination 
+                          currentPage={currentPage}
+                          totalItems={totalIssues}
+                          itemsPerPage={itemsPerPage}
+                          baseUrl="/events"
+                        />
                       </>
                     )}
                   </>

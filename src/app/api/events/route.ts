@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
     if (category && category !== 'all' && category !== '') {
       where.category = category;
     }
-
+    
     // Add date range filter if provided
     if (dateRange && dateRange !== '') {
       const dateRangeBoundaries = getDateRangeBoundaries(dateRange);
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
       registrationStart: event.registrationStart ? new Date(event.registrationStart) : null,
       registrationEnd: event.registrationEnd ? new Date(event.registrationEnd) : null,
     }));
-
+    
     return NextResponse.json({ 
       events: processedEvents,
       total: processedEvents.length,

@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
       // If temp user already exists, update it
       await db.tempUser.update({
         where: { email },
-        data: {
-          name,
+      data: {
+        name,
           password: hashedPassword,
-          phone,
+        phone,
           otpCode: otp,
           otpExpiry: otpExpiry.toISOString(),
           updatedAt: new Date().toISOString(),

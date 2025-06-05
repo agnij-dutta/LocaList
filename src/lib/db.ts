@@ -110,6 +110,53 @@ async function initializeDatabase(db: Database) {
     console.error('Error updating temp_users table:', error);
   }
   
+  // Create Event Categories table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS event_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      isActive BOOLEAN NOT NULL DEFAULT 1,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    )
+  `);
+
+  // Create Issue Categories table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS issue_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      isActive BOOLEAN NOT NULL DEFAULT 1,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    )
+  `);
+
+  // Insert default event categories
+  await db.exec(`
+    INSERT OR IGNORE INTO event_categories (name, description, createdAt, updatedAt) VALUES
+    ('Garage Sales', 'Community garage sales and yard sales', datetime('now'), datetime('now')),
+    ('Sports Matches', 'Local sports events and matches', datetime('now'), datetime('now')),
+    ('Community Classes', 'Educational classes and workshops', datetime('now'), datetime('now')),
+    ('Volunteer Opportunities', 'Community volunteer work', datetime('now'), datetime('now')),
+    ('Exhibitions', 'Art exhibitions and showcases', datetime('now'), datetime('now')),
+    ('Small Festivals', 'Local festivals and celebrations', datetime('now'), datetime('now')),
+    ('Lost & Found', 'Lost and found community posts', datetime('now'), datetime('now'))
+  `);
+
+  // Insert default issue categories
+  await db.exec(`
+    INSERT OR IGNORE INTO issue_categories (name, description, createdAt, updatedAt) VALUES
+    ('Roads', 'Roads and infrastructure issues', datetime('now'), datetime('now')),
+    ('Lighting', 'Street lighting problems', datetime('now'), datetime('now')),
+    ('Water Supply', 'Water supply and drainage issues', datetime('now'), datetime('now')),
+    ('Cleanliness', 'Cleanliness and waste management', datetime('now'), datetime('now')),
+    ('Public Safety', 'Public safety concerns', datetime('now'), datetime('now')),
+    ('Obstructions', 'Road and pathway obstructions', datetime('now'), datetime('now'))
+  `);
+  
   // Create Events table with enhanced features
   await db.exec(`
     CREATE TABLE IF NOT EXISTS events (
@@ -137,6 +184,20 @@ async function initializeDatabase(db: Database) {
       updatedAt TEXT NOT NULL,
       organizerId INTEGER NOT NULL,
       FOREIGN KEY (organizerId) REFERENCES users (id)
+    )
+  `);
+  
+  // Create Event Registrations table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS event_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      eventId INTEGER NOT NULL,
+      userId INTEGER NOT NULL,
+      registeredAt TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'registered',
+      FOREIGN KEY (eventId) REFERENCES events (id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE,
+      UNIQUE(eventId, userId)
     )
   `);
   
@@ -242,6 +303,7 @@ async function initializeDatabase(db: Database) {
       issueId INTEGER NOT NULL,
       status TEXT NOT NULL,
       comment TEXT,
+      updatedById INTEGER,
       createdAt TEXT NOT NULL,
       FOREIGN KEY (issueId) REFERENCES issues (id) ON DELETE CASCADE
     )
@@ -570,6 +632,7 @@ export const eventRepository = {
     include?: any; 
     orderBy?: any;
     take?: number;
+    skip?: number;
     userLocation?: { latitude: number; longitude: number };
     maxDistance?: number;
   } = {}) => {
@@ -650,9 +713,12 @@ export const eventRepository = {
       query += ' ORDER BY isUrgent DESC, createdAt DESC';
     }
     
-    // Handle limit (take)
+    // Handle limit and offset (take and skip)
     if (options.take) {
       query += ` LIMIT ${options.take}`;
+      if (options.skip) {
+        query += ` OFFSET ${options.skip}`;
+      }
     }
     
     let events = await db.all(query, ...queryParams);
@@ -809,6 +875,99 @@ export const eventRepository = {
     const db = await getDb();
     const voteCount = await db.get('SELECT COUNT(*) as count FROM event_votes WHERE eventId = ?', eventId);
     await db.run('UPDATE events SET upvotes = ? WHERE id = ?', [voteCount.count, eventId]);
+  },
+
+  count: async (options: { 
+    where?: any; 
+    userLocation?: { latitude: number; longitude: number };
+    maxDistance?: number;
+  } = {}) => {
+    const db = await getDb();
+    
+    let query = 'SELECT COUNT(*) as count FROM events';
+    const queryParams: any[] = [];
+    
+    // Handle where conditions (same as findMany)
+    if (options.where) {
+      const whereConditions = [];
+      
+      if (options.where.isApproved !== undefined) {
+        whereConditions.push('isApproved = ?');
+        queryParams.push(options.where.isApproved);
+      }
+      
+      if (options.where.isFlagged !== undefined) {
+        whereConditions.push('isFlagged = ?');
+        queryParams.push(options.where.isFlagged);
+      }
+      
+      if (options.where.category) {
+        whereConditions.push('category = ?');
+        queryParams.push(options.where.category);
+      }
+      
+      if (options.where.organizerId) {
+        whereConditions.push('organizerId = ?');
+        queryParams.push(options.where.organizerId);
+      }
+      
+      if (options.where.startDate?.gte) {
+        whereConditions.push('startDate >= ?');
+        const dateValue = options.where.startDate.gte instanceof Date 
+          ? options.where.startDate.gte.toISOString() 
+          : options.where.startDate.gte;
+        queryParams.push(dateValue);
+      }
+      
+      if (options.where.OR && Array.isArray(options.where.OR)) {
+        const orConditions = options.where.OR.map((condition: any) => {
+          if (condition.title?.contains) {
+            queryParams.push(`%${condition.title.contains}%`);
+            return 'title LIKE ?';
+          }
+          if (condition.description?.contains) {
+            queryParams.push(`%${condition.description.contains}%`);
+            return 'description LIKE ?';
+          }
+          if (condition.location?.contains) {
+            queryParams.push(`%${condition.location.contains}%`);
+            return 'location LIKE ?';
+          }
+          return null;
+        }).filter(Boolean);
+        
+        if (orConditions.length > 0) {
+          whereConditions.push(`(${orConditions.join(' OR ')})`);
+        }
+      }
+      
+      if (whereConditions.length > 0) {
+        query += ' WHERE ' + whereConditions.join(' AND ');
+      }
+    }
+    
+    const result = await db.get(query, ...queryParams);
+    
+    // If location filtering is needed, we need to get all records and filter by distance
+    if (options.userLocation && options.maxDistance) {
+      const allEvents = await db.all('SELECT latitude, longitude FROM events' + 
+        (options.where ? ' WHERE ' + query.split('WHERE ')[1]?.split(' ORDER BY')[0] : ''), 
+        ...queryParams);
+      
+      const filteredCount = allEvents.filter(event => {
+        const distance = locationUtils.calculateDistance(
+          options.userLocation!.latitude,
+          options.userLocation!.longitude,
+          event.latitude,
+          event.longitude
+        );
+        return distance <= options.maxDistance!;
+      }).length;
+      
+      return filteredCount;
+    }
+    
+    return result?.count || 0;
   }
 };
 
@@ -965,6 +1124,7 @@ export const issueRepository = {
     include?: any; 
     orderBy?: any;
     take?: number;
+    skip?: number;
     userLocation?: { latitude: number; longitude: number };
     maxDistance?: number;
   } = {}) => {
@@ -1034,6 +1194,9 @@ export const issueRepository = {
     
     if (options.take) {
       query += ` LIMIT ${options.take}`;
+      if (options.skip) {
+        query += ` OFFSET ${options.skip}`;
+      }
     }
     
     let issues = await db.all(query, ...queryParams);
@@ -1164,6 +1327,92 @@ export const issueRepository = {
     const db = await getDb();
     const voteCount = await db.get('SELECT COUNT(*) as count FROM issue_votes WHERE issueId = ?', issueId);
     await db.run('UPDATE issues SET upvotes = ? WHERE id = ?', [voteCount.count, issueId]);
+  },
+
+  count: async (options: { 
+    where?: any; 
+    userLocation?: { latitude: number; longitude: number };
+    maxDistance?: number;
+  } = {}) => {
+    const db = await getDb();
+    
+    let query = 'SELECT COUNT(*) as count FROM issues';
+    const queryParams: any[] = [];
+    
+    if (options.where) {
+      const whereConditions = [];
+      
+      if (options.where.isFlagged !== undefined) {
+        whereConditions.push('isFlagged = ?');
+        queryParams.push(options.where.isFlagged);
+      }
+      
+      if (options.where.category) {
+        whereConditions.push('category = ?');
+        queryParams.push(options.where.category);
+      }
+      
+      if (options.where.status) {
+        whereConditions.push('status = ?');
+        queryParams.push(options.where.status);
+      }
+      
+      if (options.where.reporterId) {
+        whereConditions.push('reporterId = ?');
+        queryParams.push(options.where.reporterId);
+      }
+      
+      // Handle OR search conditions
+      if (options.where.OR && Array.isArray(options.where.OR)) {
+        const orConditions = options.where.OR.map((condition: any) => {
+          if (condition.title?.contains) {
+            queryParams.push(`%${condition.title.contains}%`);
+            return 'title LIKE ?';
+          }
+          if (condition.description?.contains) {
+            queryParams.push(`%${condition.description.contains}%`);
+            return 'description LIKE ?';
+          }
+          if (condition.location?.contains) {
+            queryParams.push(`%${condition.location.contains}%`);
+            return 'location LIKE ?';
+          }
+          return null;
+        }).filter(Boolean);
+        
+        if (orConditions.length > 0) {
+          whereConditions.push(`(${orConditions.join(' OR ')})`);
+        }
+      }
+      
+      if (whereConditions.length > 0) {
+        query += ' WHERE ' + whereConditions.join(' AND ');
+      }
+    }
+    
+    const result = await db.get(query, ...queryParams);
+    
+    // If location filtering is needed, we need to get all records and filter by distance
+    if (options.userLocation && options.maxDistance) {
+      const allIssues = await db.all('SELECT latitude, longitude FROM issues' + 
+        (options.where ? ' WHERE ' + query.split('WHERE ')[1]?.split(' ORDER BY')[0] : ''), 
+        ...queryParams);
+      
+      const filteredCount = allIssues.filter(issue => {
+        if (!issue.latitude || !issue.longitude) return false;
+        const distance = locationUtils.calculateDistance(
+          options.userLocation!.latitude,
+          options.userLocation!.longitude,
+          issue.latitude,
+          issue.longitude
+        );
+        return distance <= options.maxDistance!;
+      }).length;
+      
+      return filteredCount;
+    }
+    
+    return result?.count || 0;
   }
 };
 
@@ -1214,17 +1463,14 @@ export const issueVoteRepository = {
 
 // Issue Status Updates Repository
 export const issueStatusUpdateRepository = {
-  create: async ({ data }: { data: { issueId: number; status: string; comment?: string } }) => {
+  create: async ({ data }: { data: { issueId: number; status: string; comment?: string; updatedById?: number } }) => {
     const db = await getDb();
     const now = new Date().toISOString();
     
     const result = await db.run(
-      'INSERT INTO issue_status_updates (issueId, status, comment, createdAt) VALUES (?, ?, ?, ?)',
-      [data.issueId, data.status, data.comment || null, now]
+      'INSERT INTO issue_status_updates (issueId, status, comment, updatedById, createdAt) VALUES (?, ?, ?, ?, ?)',
+      [data.issueId, data.status, data.comment || null, data.updatedById || null, now]
     );
-    
-    // Update the issue status
-    await issueRepository.update({ where: { id: data.issueId }, data: { status: data.status } });
     
     return {
       id: result.lastID,
@@ -1495,6 +1741,11 @@ export const violationReportRepository = {
     return db.all(query, ...params);
   },
   
+  findUnique: async ({ where }: { where: { id: number } }) => {
+    const db = await getDb();
+    return db.get('SELECT * FROM violation_reports WHERE id = ?', where.id);
+  },
+  
   update: async ({ where, data }: { where: { id: number }; data: any }) => {
     const db = await getDb();
     const report = await db.get('SELECT * FROM violation_reports WHERE id = ?', where.id);
@@ -1525,6 +1776,11 @@ export const violationReportRepository = {
       ...data,
       reviewedAt: data.status ? now : report.reviewedAt
     };
+  },
+  
+  delete: async ({ where }: { where: { id: number } }) => {
+    const db = await getDb();
+    return db.run('DELETE FROM violation_reports WHERE id = ?', where.id);
   }
 };
 
@@ -1557,6 +1813,228 @@ export const issuePhotoRepository = {
   }
 };
 
+// Event Categories Repository
+export const eventCategoryRepository = {
+  findMany: async (options: { where?: any; orderBy?: any } = {}) => {
+    const db = await getDb();
+    let query = 'SELECT * FROM event_categories';
+    const params: any[] = [];
+    
+    if (options.where) {
+      const conditions = [];
+      if (options.where.isActive !== undefined) {
+        conditions.push('isActive = ?');
+        params.push(options.where.isActive);
+      }
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+    }
+    
+    query += ' ORDER BY name ASC';
+    return db.all(query, ...params);
+  },
+  
+  findUnique: async ({ where }: { where: { id?: number; name?: string } }) => {
+    const db = await getDb();
+    if (where.id) {
+      return db.get('SELECT * FROM event_categories WHERE id = ?', where.id);
+    }
+    if (where.name) {
+      return db.get('SELECT * FROM event_categories WHERE name = ?', where.name);
+    }
+    return null;
+  },
+  
+  create: async ({ data }: { data: { name: string; description?: string } }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    const result = await db.run(
+      'INSERT INTO event_categories (name, description, createdAt, updatedAt) VALUES (?, ?, ?, ?)',
+      [data.name, data.description || null, now, now]
+    );
+    
+    return {
+      id: result.lastID,
+      ...data,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    };
+  },
+  
+  update: async ({ where, data }: { where: { id: number }; data: any }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    const updates = Object.entries(data)
+      .filter(([key]) => key !== 'id')
+      .map(([key]) => `${key} = ?`);
+    
+    const values = Object.entries(data)
+      .filter(([key]) => key !== 'id')
+      .map(([, value]) => value);
+    
+    await db.run(
+      `UPDATE event_categories SET ${updates.join(', ')}, updatedAt = ? WHERE id = ?`,
+      [...values, now, where.id]
+    );
+    
+    return { id: where.id, ...data, updatedAt: now };
+  },
+  
+  delete: async ({ where }: { where: { id: number } }) => {
+    const db = await getDb();
+    return db.run('DELETE FROM event_categories WHERE id = ?', where.id);
+  }
+};
+
+// Issue Categories Repository
+export const issueCategoryRepository = {
+  findMany: async (options: { where?: any; orderBy?: any } = {}) => {
+    const db = await getDb();
+    let query = 'SELECT * FROM issue_categories';
+    const params: any[] = [];
+    
+    if (options.where) {
+      const conditions = [];
+      if (options.where.isActive !== undefined) {
+        conditions.push('isActive = ?');
+        params.push(options.where.isActive);
+      }
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
+      }
+    }
+    
+    query += ' ORDER BY name ASC';
+    return db.all(query, ...params);
+  },
+  
+  findUnique: async ({ where }: { where: { id?: number; name?: string } }) => {
+    const db = await getDb();
+    if (where.id) {
+      return db.get('SELECT * FROM issue_categories WHERE id = ?', where.id);
+    }
+    if (where.name) {
+      return db.get('SELECT * FROM issue_categories WHERE name = ?', where.name);
+    }
+    return null;
+  },
+  
+  create: async ({ data }: { data: { name: string; description?: string } }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    const result = await db.run(
+      'INSERT INTO issue_categories (name, description, createdAt, updatedAt) VALUES (?, ?, ?, ?)',
+      [data.name, data.description || null, now, now]
+    );
+    
+    return {
+      id: result.lastID,
+      ...data,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now
+    };
+  },
+  
+  update: async ({ where, data }: { where: { id: number }; data: any }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    const updates = Object.entries(data)
+      .filter(([key]) => key !== 'id')
+      .map(([key]) => `${key} = ?`);
+    
+    const values = Object.entries(data)
+      .filter(([key]) => key !== 'id')
+      .map(([, value]) => value);
+    
+    await db.run(
+      `UPDATE issue_categories SET ${updates.join(', ')}, updatedAt = ? WHERE id = ?`,
+      [...values, now, where.id]
+    );
+    
+    return { id: where.id, ...data, updatedAt: now };
+  },
+  
+  delete: async ({ where }: { where: { id: number } }) => {
+    const db = await getDb();
+    return db.run('DELETE FROM issue_categories WHERE id = ?', where.id);
+  }
+};
+
+// Event Registrations Repository
+export const eventRegistrationRepository = {
+  findMany: async ({ where }: { where: { eventId?: number; userId?: number } }) => {
+    const db = await getDb();
+    
+    if (where.eventId) {
+      const registrations = await db.all(`
+        SELECT er.*, u.name, u.email, u.phone 
+        FROM event_registrations er 
+        JOIN users u ON er.userId = u.id 
+        WHERE er.eventId = ? 
+        ORDER BY er.registeredAt DESC
+      `, where.eventId);
+      return registrations;
+    }
+    
+    if (where.userId) {
+      const registrations = await db.all(`
+        SELECT er.*, e.title, e.startDate, e.location 
+        FROM event_registrations er 
+        JOIN events e ON er.eventId = e.id 
+        WHERE er.userId = ? 
+        ORDER BY er.registeredAt DESC
+      `, where.userId);
+      return registrations;
+    }
+    
+    return [];
+  },
+  
+  findUnique: async ({ where }: { where: { eventId: number; userId: number } }) => {
+    const db = await getDb();
+    return db.get('SELECT * FROM event_registrations WHERE eventId = ? AND userId = ?', [where.eventId, where.userId]);
+  },
+  
+  create: async ({ data }: { data: { eventId: number; userId: number } }) => {
+    const db = await getDb();
+    const now = new Date().toISOString();
+    
+    try {
+      const result = await db.run(
+        'INSERT INTO event_registrations (eventId, userId, registeredAt) VALUES (?, ?, ?)',
+        [data.eventId, data.userId, now]
+      );
+      
+      return {
+        id: result.lastID,
+        ...data,
+        registeredAt: now,
+        status: 'registered'
+      };
+    } catch (error) {
+      return null; // Registration already exists
+    }
+  },
+  
+  delete: async ({ where }: { where: { eventId: number; userId: number } }) => {
+    const db = await getDb();
+    return db.run('DELETE FROM event_registrations WHERE eventId = ? AND userId = ?', [where.eventId, where.userId]);
+  },
+  
+  count: async ({ where }: { where: { eventId: number } }) => {
+    const db = await getDb();
+    const result = await db.get('SELECT COUNT(*) as count FROM event_registrations WHERE eventId = ?', where.eventId);
+    return result?.count || 0;
+  }
+};
+
 // Create a default export for the db connection with all repositories
 const dbClient = {
   user: userRepository,
@@ -1573,6 +2051,9 @@ const dbClient = {
   interest: interestRepository,
   notification: notificationRepository,
   violationReport: violationReportRepository,
+  eventCategory: eventCategoryRepository,
+  issueCategory: issueCategoryRepository,
+  eventRegistration: eventRegistrationRepository,
 };
 
 export default dbClient; 

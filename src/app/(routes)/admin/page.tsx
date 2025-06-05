@@ -234,29 +234,33 @@ export default async function AdminPage() {
               )}
             </section>
             
-            {/* Users Overview (Placeholder) */}
+            {/* Users Overview */}
             <section id="users" className="mb-12">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">User Management</h2>
               <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   View and manage user accounts, verify organizers, or ban users who violate community guidelines.
                 </p>
-                <Button variant="outline">
-                  <FiUsers className="mr-2" /> View All Users
-                </Button>
+                <Link href="/admin/users">
+                  <Button variant="outline">
+                    <FiUsers className="mr-2" /> View All Users
+                  </Button>
+                </Link>
               </div>
             </section>
             
-            {/* Flagged Content (Placeholder) */}
+            {/* Flagged Content */}
             <section id="reports" className="mb-12">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Flagged Content</h2>
               <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Review content that has been flagged by users for inappropriate material or policy violations.
                 </p>
-                <Button variant="outline">
-                  <FiFlag className="mr-2" /> View Reports
-                </Button>
+                <Link href="/admin/reports">
+                  <Button variant="outline">
+                    <FiFlag className="mr-2" /> View Reports
+                  </Button>
+                </Link>
               </div>
             </section>
           </div>
