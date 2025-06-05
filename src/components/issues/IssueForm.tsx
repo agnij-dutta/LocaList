@@ -102,6 +102,40 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
     setImagePreviews(newPreviews);
   };
 
+  // Reverse geocoding function
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY&limit=1&no_annotations=1&language=en`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const components = result.components;
+          
+          // Build a readable address
+          const parts = [];
+          if (components.road) parts.push(components.road);
+          if (components.neighbourhood) parts.push(components.neighbourhood);
+          if (components.suburb) parts.push(components.suburb);
+          if (components.city || components.town || components.village) {
+            parts.push(components.city || components.town || components.village);
+          }
+          if (components.state) parts.push(components.state);
+          
+          return parts.join(', ') || result.formatted;
+        }
+      }
+    } catch (error) {
+      console.error('Reverse geocoding failed:', error);
+    }
+    
+    // Fallback to coordinates if reverse geocoding fails
+    return `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  };
+
   const getCurrentLocation = () => {
     setIsGettingLocation(true);
     setError(null);
@@ -113,16 +147,23 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         };
         setLocationCoords(coords);
-        setIsGettingLocation(false);
         
-        // Use reverse geocoding or just set a default message
-        setValue('location', `Location: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+        try {
+          // Get readable location name
+          const locationName = await reverseGeocode(coords.latitude, coords.longitude);
+          setValue('location', locationName);
+        } catch (error) {
+          // Fallback to coordinates
+          setValue('location', `Location: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+        }
+        
+        setIsGettingLocation(false);
       },
       (error) => {
         setError('Unable to get your location. Please enter location manually.');

@@ -333,7 +333,7 @@ export default async function HomePage() {
                   Community Issues
                 </h2>
                 <Link
-                  href="/issues"
+                  href="/events?tab=issues"
                   className="text-red-600 dark:text-red-400 flex items-center gap-1 hover:underline font-medium"
                 >
                   View all <FiArrowRight size={16} />

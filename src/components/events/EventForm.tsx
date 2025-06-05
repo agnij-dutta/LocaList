@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { FaUpload } from 'react-icons/fa';
+import { FiMapPin } from 'react-icons/fi';
 
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -76,6 +77,8 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(propSubmitting);
   const [error, setError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<{latitude: number; longitude: number} | null>(null);
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -105,6 +108,81 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   const watchStartDate = watch('startDate');
   const watchStartTime = watch('startTime');
 
+  // Reverse geocoding function
+  const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_API_KEY&limit=1&no_annotations=1&language=en`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const components = result.components;
+          
+          // Build a readable address
+          const parts = [];
+          if (components.road) parts.push(components.road);
+          if (components.neighbourhood) parts.push(components.neighbourhood);
+          if (components.suburb) parts.push(components.suburb);
+          if (components.city || components.town || components.village) {
+            parts.push(components.city || components.town || components.village);
+          }
+          if (components.state) parts.push(components.state);
+          
+          return parts.join(', ') || result.formatted;
+        }
+      }
+    } catch (error) {
+      console.error('Reverse geocoding failed:', error);
+    }
+    
+    // Fallback to coordinates if reverse geocoding fails
+    return `Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  };
+
+  const getCurrentLocation = () => {
+    setIsGettingLocation(true);
+    setError(null);
+
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by this browser');
+      setIsGettingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setLocationCoords(coords);
+        
+        try {
+          // Get readable location name
+          const locationName = await reverseGeocode(coords.latitude, coords.longitude);
+          setValue('location', locationName);
+        } catch (error) {
+          // Fallback to coordinates
+          setValue('location', `Location: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+        }
+        
+        setIsGettingLocation(false);
+      },
+      (error) => {
+        setError('Unable to get your location. Please enter location manually.');
+        setIsGettingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      }
+    );
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -118,6 +196,11 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   };
 
   const processForm = async (data: EventFormValues) => {
+    if (!locationCoords) {
+      setError('Please get your current location or enter location manually');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     
@@ -137,6 +220,10 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
     Object.entries(data).forEach(([key, value]) => {
       if (value) formData.append(key, value);
     });
+
+    // Add coordinates
+    formData.append('latitude', locationCoords.latitude.toString());
+    formData.append('longitude', locationCoords.longitude.toString());
     
     if (imageFile) {
       formData.append('image', imageFile);
@@ -188,12 +275,30 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
           <label htmlFor="location" className="block text-sm font-medium text-foreground mb-1">
             Location
           </label>
-          <Input
-            id="location"
-            {...register('location')}
-            placeholder="Enter location"
-            error={errors.location?.message}
-          />
+          <div className="flex gap-2">
+            <Input
+              id="location"
+              {...register('location')}
+              placeholder="Enter location or use GPS"
+              error={errors.location?.message}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={getCurrentLocation}
+              isLoading={isGettingLocation}
+              className="px-4 py-2 whitespace-nowrap"
+            >
+              <FiMapPin className="w-4 h-4 mr-2" />
+              {isGettingLocation ? 'Getting...' : 'Use GPS'}
+            </Button>
+          </div>
+          {locationCoords && (
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              ✓ Location coordinates captured: {locationCoords.latitude.toFixed(4)}, {locationCoords.longitude.toFixed(4)}
+            </p>
+          )}
         </div>
 
         <div>

@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { signIn } from 'next-auth/react';
 import * as z from 'zod';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import OTPVerification from '@/components/auth/OTPVerification';
 import Link from 'next/link';
 
 // Form validation schema
@@ -32,15 +34,20 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+type RegistrationStep = 'form' | 'otp' | 'success';
+
 export default function RegisterForm() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('form');
+  const [registrationData, setRegistrationData] = useState<RegisterFormValues | null>(null);
   
   const {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -57,6 +64,7 @@ export default function RegisterForm() {
     setServerError(null);
     
     try {
+      // First, register the user and send OTP
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -75,8 +83,10 @@ export default function RegisterForm() {
       if (!response.ok) {
         throw new Error(result.message || "Registration failed");
       }
-      
-      router.push('/login?registered=true');
+
+      // Store registration data and move to OTP step
+      setRegistrationData(data);
+      setCurrentStep('otp');
     } catch (error) {
       console.error('Registration error:', error);
       setServerError(error instanceof Error ? error.message : "An unknown error occurred");
@@ -84,6 +94,46 @@ export default function RegisterForm() {
       setIsLoading(false);
     }
   };
+
+  const handleOTPVerificationSuccess = async () => {
+    if (!registrationData) return;
+
+    try {
+      // Auto-login the user after successful OTP verification
+      const result = await signIn('credentials', {
+        email: registrationData.email,
+        password: registrationData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error('Auto-login failed');
+      }
+
+      // Redirect to home page
+      router.push('/');
+    } catch (error) {
+      console.error('Auto-login error:', error);
+      // If auto-login fails, redirect to login page with success message
+      router.push('/login?verified=true');
+    }
+  };
+
+  const handleBackToForm = () => {
+    setCurrentStep('form');
+    setServerError(null);
+  };
+
+  if (currentStep === 'otp' && registrationData) {
+    return (
+      <OTPVerification
+        email={registrationData.email}
+        name={registrationData.name}
+        onVerificationSuccess={handleOTPVerificationSuccess}
+        onBack={handleBackToForm}
+      />
+    );
+  }
   
   return (
     <div className="w-full max-w-md mx-auto p-6 bg-white dark:bg-slate-800 rounded-xl shadow-md">
@@ -139,7 +189,7 @@ export default function RegisterForm() {
           className="w-full"
           isLoading={isLoading}
         >
-          Register
+          Create Account & Send Verification
         </Button>
       </form>
       
