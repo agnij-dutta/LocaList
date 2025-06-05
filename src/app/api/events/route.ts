@@ -270,20 +270,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate category
-    const validCategories = [
-      'Garage Sales',
-      'Sports Matches', 
-      'Community Classes',
-      'Volunteer Opportunities',
-      'Exhibitions',
-      'Small Festivals',
-      'Lost & Found'
-    ];
+    // Validate category against database
+    const { eventCategoryRepository } = await import('@/lib/db');
+    const categoryExists = await eventCategoryRepository.findUnique({
+      where: { name: data.category }
+    });
 
-    if (!validCategories.includes(data.category)) {
+    if (!categoryExists || !categoryExists.isActive) {
       return NextResponse.json(
-        { message: 'Invalid event category' },
+        { message: 'Invalid or inactive event category' },
         { status: 400 }
       );
     }

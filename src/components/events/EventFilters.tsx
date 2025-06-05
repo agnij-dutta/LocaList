@@ -19,26 +19,12 @@ const filterSchema = z.object({
 
 type FilterValues = z.infer<typeof filterSchema>;
 
-const EVENT_CATEGORY_OPTIONS = [
-  { value: '', label: 'All Categories' },
-  { value: 'Garage Sales', label: 'Garage Sales' },
-  { value: 'Sports Matches', label: 'Sports Matches' },
-  { value: 'Community Classes', label: 'Community Classes' },
-  { value: 'Volunteer Opportunities', label: 'Volunteer Opportunities' },
-  { value: 'Exhibitions', label: 'Exhibitions' },
-  { value: 'Small Festivals', label: 'Small Festivals' },
-  { value: 'Lost & Found', label: 'Lost & Found' },
-];
-
-const ISSUE_CATEGORY_OPTIONS = [
-  { value: '', label: 'All Categories' },
-  { value: 'Roads', label: 'Roads & Infrastructure' },
-  { value: 'Lighting', label: 'Street Lighting' },
-  { value: 'Water Supply', label: 'Water Supply & Drainage' },
-  { value: 'Cleanliness', label: 'Cleanliness & Waste' },
-  { value: 'Public Safety', label: 'Public Safety' },
-  { value: 'Obstructions', label: 'Obstructions' },
-];
+interface Category {
+  id: number;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Statuses' },
@@ -86,6 +72,9 @@ export default function EventFilters({
   const searchParams = useSearchParams();
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
+  const [eventCategories, setEventCategories] = useState<Category[]>([]);
+  const [issueCategories, setIssueCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const {
     register,
@@ -107,6 +96,35 @@ export default function EventFilters({
 
   // Watch all form values
   const watchedValues = watch();
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const [eventCategoriesResponse, issueCategoriesResponse] = await Promise.all([
+          fetch('/api/categories/events'),
+          fetch('/api/categories/issues'),
+        ]);
+
+        if (eventCategoriesResponse.ok) {
+          const eventData = await eventCategoriesResponse.json();
+          setEventCategories(eventData.categories || []);
+        }
+
+        if (issueCategoriesResponse.ok) {
+          const issueData = await issueCategoriesResponse.json();
+          setIssueCategories(issueData.categories || []);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Reset inappropriate filters when tab changes
   useEffect(() => {
@@ -178,9 +196,23 @@ export default function EventFilters({
   const clearFilter = (filterName: keyof FilterValues) => {
     setValue(filterName, '');
   };
-
+  
   // Get the appropriate category options based on current tab
-  const categoryOptions = currentTab === 'issues' ? ISSUE_CATEGORY_OPTIONS : EVENT_CATEGORY_OPTIONS;
+  const getCategoryOptions = () => {
+    const categories = currentTab === 'issues' ? issueCategories : eventCategories;
+    const options = [{ value: '', label: 'All Categories' }];
+    
+    categories.forEach(category => {
+      options.push({
+        value: category.name,
+        label: category.name,
+      });
+    });
+    
+    return options;
+  };
+
+  const categoryOptions = getCategoryOptions();
   const searchPlaceholder = currentTab === 'issues' ? 'Search issues...' : 'Search events...';
 
   return (
@@ -379,7 +411,7 @@ export default function EventFilters({
                 )}
                 {watchedValues.category && (
                   <span className="inline-flex items-center gap-1 bg-secondary/10 text-secondary-foreground rounded-full px-3 py-1 text-sm">
-                    {categoryOptions.find(opt => opt.value === watchedValues.category)?.label}
+                    {categoryOptions.find((opt) => opt.value === watchedValues.category)?.label}
                     <button
                       type="button"
                       onClick={() => clearFilter('category')}

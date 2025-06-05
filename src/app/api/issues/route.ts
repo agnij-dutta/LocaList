@@ -97,19 +97,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate category
-    const validCategories = [
-      'Roads',
-      'Lighting', 
-      'Water Supply',
-      'Cleanliness',
-      'Public Safety',
-      'Obstructions',
-    ];
+    // Validate category against database
+    const { issueCategoryRepository } = await import('@/lib/db');
+    const categoryExists = await issueCategoryRepository.findUnique({
+      where: { name: data.category }
+    });
 
-    if (!validCategories.includes(data.category)) {
+    if (!categoryExists || !categoryExists.isActive) {
       return NextResponse.json(
-        { message: 'Invalid issue category' },
+        { message: 'Invalid or inactive issue category' },
         { status: 400 }
       );
     }

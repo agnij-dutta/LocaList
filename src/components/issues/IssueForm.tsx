@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,14 +23,12 @@ const issueFormSchema = z.object({
 
 type IssueFormValues = z.infer<typeof issueFormSchema>;
 
-const CATEGORY_OPTIONS = [
-  { value: 'Roads', label: 'Roads & Infrastructure' },
-  { value: 'Lighting', label: 'Street Lighting' },
-  { value: 'Water Supply', label: 'Water Supply & Drainage' },
-  { value: 'Cleanliness', label: 'Cleanliness & Waste' },
-  { value: 'Public Safety', label: 'Public Safety' },
-  { value: 'Obstructions', label: 'Obstructions' },
-];
+interface IssueCategory {
+  id: number;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
 
 interface IssueFormProps {
   onSubmit: (data: FormData) => Promise<{ success: boolean; issueId?: number; error?: string }>;
@@ -46,6 +44,8 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
   const [error, setError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationCoords, setLocationCoords] = useState<{latitude: number; longitude: number} | null>(null);
+  const [categories, setCategories] = useState<IssueCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const defaultValues: IssueFormValues = {
     title: '',
@@ -68,6 +68,36 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
   });
 
   const isAnonymous = watch('isAnonymous');
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await fetch('/api/categories/issues');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories || []);
+        } else {
+          console.error('Failed to fetch categories');
+          setError('Failed to load categories');
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setError('Failed to load categories');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Convert categories to options format
+  const categoryOptions = categories.map(category => ({
+    value: category.name,
+    label: category.name,
+  }));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -249,9 +279,10 @@ export default function IssueForm({ onSubmit, initialData, isSubmitting: propSub
           <Select
             id="category"
             {...register('category')}
-            options={CATEGORY_OPTIONS}
-            placeholder="Select issue category"
+            options={categoryOptions}
+            placeholder={categoriesLoading ? "Loading categories..." : "Select issue category"}
             error={errors.category?.message}
+            disabled={categoriesLoading}
           />
         </div>
 

@@ -6,7 +6,8 @@ import Container from '@/components/ui/Container';
 import BaseLayout from '@/components/layouts/BaseLayout';
 import Button from '@/components/ui/Button';
 import Link from 'next/link';
-import { FiArrowLeft, FiMapPin, FiClock, FiUser, FiThumbsUp, FiFlag, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiArrowLeft, FiMapPin, FiClock, FiUser, FiEdit, FiTrash2 } from 'react-icons/fi';
+import IssueActions from '@/components/issues/IssueActions';
 
 interface PageProps {
   params: Promise<{ issueId: string }>;
@@ -115,36 +116,27 @@ export default async function IssueDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  {currentUser && (
-                    <>
-                      <Button
-                        variant={userVote?.voteType === 'up' ? 'primary' : 'outline'}
-                        size="sm"
-                        className="flex items-center gap-2"
-                      >
-                        <FiThumbsUp className="w-4 h-4" />
-                        {upvotes}
-                      </Button>
-                      
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <IssueActions
+                    issueId={issue.id}
+                    currentUserId={currentUser ? parseInt(currentUser.id.toString()) : undefined}
+                    initialUpvotes={upvotes}
+                    initialFollowersCount={issue.followers?.length || 0}
+                    userVote={userVote}
+                    isFollowing={currentUser ? issue.followers?.some((f: any) => f.userId === currentUser.id) : false}
+                  />
+                  
+                  {currentUser && (currentUser.isAdmin || currentUser.id === issue.reporterId) && (
+                    <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm">
-                        <FiFlag className="w-4 h-4 mr-2" />
-                        Report Spam
+                        <FiEdit className="w-4 h-4 mr-2" />
+                        Edit
                       </Button>
-
-                      {(currentUser.isAdmin || currentUser.id === issue.reporterId) && (
-                        <>
-                          <Button variant="outline" size="sm">
-                            <FiEdit className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button variant="danger" size="sm">
-                            <FiTrash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </Button>
-                        </>
-                      )}
-                    </>
+                      <Button variant="danger" size="sm">
+                        <FiTrash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -297,12 +289,6 @@ export default async function IssueDetailPage({ params }: PageProps) {
                       Quick Actions
                     </h3>
                     <div className="space-y-3">
-                      <Button className="w-full" size="sm">
-                        Follow Issue
-                      </Button>
-                      <Button variant="outline" className="w-full" size="sm">
-                        Share Issue
-                      </Button>
                       <Link href="/issues/create">
                         <Button variant="outline" className="w-full" size="sm">
                           Report Similar Issue

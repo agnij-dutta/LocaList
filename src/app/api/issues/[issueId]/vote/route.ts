@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getServerSession } from "next-auth";
 
 export async function POST(
@@ -16,9 +16,9 @@ export async function POST(
       );
     }
 
-    const user = await db.user.findUnique({
-      where: { email: session.user.email }
-    });
+    const db = await getDb();
+
+    const user = await db.get('SELECT * FROM users WHERE email = ?', session.user.email);
 
     if (!user) {
       return NextResponse.json(
@@ -44,9 +44,7 @@ export async function POST(
     }
 
     // Check if issue exists
-    const issue = await db.issue.findUnique({
-      where: { id: issueId }
-    });
+    const issue = await db.get('SELECT * FROM issues WHERE id = ?', issueId);
 
     if (!issue) {
       return NextResponse.json(
@@ -63,15 +61,17 @@ export async function POST(
     }
 
     // Check if user already voted
-    const existingVote = await db.issueVote.findUnique({
-      where: { issueId, userId: user.id }
-    });
+    const existingVote = await db.get(
+      'SELECT * FROM issue_votes WHERE issueId = ? AND userId = ?',
+      [issueId, user.id]
+    );
 
     if (existingVote) {
       // Remove vote (unlike)
-      await db.issueVote.delete({
-        where: { issueId, userId: user.id }
-      });
+      await db.run(
+        'DELETE FROM issue_votes WHERE issueId = ? AND userId = ?',
+        [issueId, user.id]
+      );
 
       return NextResponse.json({ 
         message: 'Vote removed',
@@ -79,9 +79,11 @@ export async function POST(
       });
     } else {
       // Add vote (like)
-      await db.issueVote.create({
-        data: { issueId, userId: user.id }
-      });
+      const now = new Date().toISOString();
+      await db.run(
+        'INSERT INTO issue_votes (issueId, userId, createdAt) VALUES (?, ?, ?)',
+        [issueId, user.id, now]
+      );
 
       return NextResponse.json({ 
         message: 'Vote added',

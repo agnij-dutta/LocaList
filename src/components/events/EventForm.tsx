@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
@@ -55,15 +55,12 @@ const eventFormSchema = z.object({
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
-const CATEGORY_OPTIONS = [
-  { value: 'Garage Sales', label: 'Garage Sales' },
-  { value: 'Sports Matches', label: 'Sports Matches' },
-  { value: 'Community Classes', label: 'Community Classes' },
-  { value: 'Volunteer Opportunities', label: 'Volunteer Opportunities' },
-  { value: 'Exhibitions', label: 'Exhibitions' },
-  { value: 'Small Festivals', label: 'Small Festivals' },
-  { value: 'Lost & Found', label: 'Lost & Found' },
-];
+interface EventCategory {
+  id: number;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
 
 interface EventFormProps {
   onSubmit: (data: FormData) => Promise<{ success: boolean; eventId?: number; error?: string }>;
@@ -79,6 +76,8 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
   const [error, setError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationCoords, setLocationCoords] = useState<{latitude: number; longitude: number} | null>(null);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   // Get today's date in YYYY-MM-DD format for min attribute
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -107,6 +106,36 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
 
   const watchStartDate = watch('startDate');
   const watchStartTime = watch('startTime');
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await fetch('/api/categories/events');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data.categories || []);
+        } else {
+          console.error('Failed to fetch categories');
+          setError('Failed to load categories');
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setError('Failed to load categories');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Convert categories to options format
+  const categoryOptions = categories.map(category => ({
+    value: category.name,
+    label: category.name,
+  }));
 
   // Reverse geocoding function
   const reverseGeocode = async (latitude: number, longitude: number): Promise<string> => {
@@ -406,9 +435,10 @@ export default function EventForm({ onSubmit, initialData, isSubmitting: propSub
           <Select
             id="category"
             {...register('category')}
-            options={CATEGORY_OPTIONS}
-            placeholder="Select a category"
+            options={categoryOptions}
+            placeholder={categoriesLoading ? "Loading categories..." : "Select a category"}
             error={errors.category?.message}
+            disabled={categoriesLoading}
           />
         </div>
 
