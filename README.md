@@ -1,10 +1,10 @@
-# Community Pulse
+# LocaList
 
 A location-aware community platform that brings neighbors together through local events and community issue reporting. Built with Next.js 15, TypeScript, and SQLite.
 
 ## 🌟 Overview
 
-Community Pulse combines event discovery with community issue reporting in a single, user-friendly platform. The application uses GPS-based filtering to show only relevant content within a 3-5km radius, ensuring users see what matters in their immediate neighborhood.
+LocaList combines event discovery with community issue reporting in a single, user-friendly platform. The application uses GPS-based filtering to show only relevant content within a 3-5km radius, ensuring users see what matters in their immediate neighborhood.
 
 ## ✨ Key Features
 
@@ -276,25 +276,10 @@ For support, please:
 - Create a new issue if needed
 - Contact the development team
 
-## 🚧 Roadmap
+## 🚧 Video
 
-### Upcoming Features
-- [ ] Real-time notifications with WebSockets
-- [ ] Mobile app development
-- [ ] Integration with city services
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Weather integration for events
-- [ ] Social media sharing
-- [ ] Email notification system
-
-### Technical Improvements
-- [ ] Performance optimizations
-- [ ] Enhanced error handling
-- [ ] Automated testing suite
-- [ ] CI/CD pipeline
-- [ ] Docker containerization
-- [ ] Cloud deployment guides
+video 1 - https://drive.google.com/file/d/1GvLR5rwrUSN4yg6KM-kvoZaiasXfCZds/view?usp=sharing
+video 2 - https://drive.google.com/file/d/1SIlpn6dnYdGeG6FHo4LYTwYMki0-Af3t/view?usp=sharing
 
 ---
 
