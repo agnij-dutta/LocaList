@@ -12,9 +12,9 @@ import Button from '@/components/ui/Button';
 import RegisterForm from '@/components/events/RegisterForm';
 import EventActions from '@/components/events/EventActions';
 
-export const generateMetadata = async ({ params }: { params: { id: string } }): Promise<Metadata> => {
+export const generateMetadata = async ({ params }: { params: { eventId: string } }): Promise<Metadata> => {
   const resolvedParams = await Promise.resolve(params);
-  const eventId = parseInt(resolvedParams.id);
+  const eventId = parseInt(resolvedParams.eventId);
   
   if (isNaN(eventId)) {
     return {
@@ -45,9 +45,9 @@ export const generateMetadata = async ({ params }: { params: { id: string } }): 
   }
 };
 
-export default async function EventDetailPage({ params }: { params: { id: string } }) {
+export default async function EventDetailPage({ params }: { params: { eventId: string } }) {
   const resolvedParams = await Promise.resolve(params);
-  const eventId = parseInt(resolvedParams.id);
+  const eventId = parseInt(resolvedParams.eventId);
   const currentUser = await getCurrentUser();
   
   if (isNaN(eventId)) {

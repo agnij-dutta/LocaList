@@ -4,7 +4,7 @@ import { eventRepository, violationReportRepository } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { eventId: string } }
 ) {
   try {
     const currentUser = await getCurrentUser();
@@ -17,7 +17,7 @@ export async function POST(
     }
 
     const resolvedParams = await Promise.resolve(params);
-    const eventId = parseInt(resolvedParams.id);
+    const eventId = parseInt(resolvedParams.eventId);
     
     if (isNaN(eventId)) {
       return NextResponse.json(
